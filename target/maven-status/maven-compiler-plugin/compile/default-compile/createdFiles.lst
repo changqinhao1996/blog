@@ -33,10 +33,12 @@ com/cqh/service/CommentService.class
 com/cqh/aspect/LogAspect$RequestLog.class
 com/cqh/web/ArchiveShowController.class
 com/cqh/web/admin/LoginController.class
+com/cqh/service/AiService.class
 com/cqh/NotFoundException.class
 com/cqh/service/BlogServiceImpl$1.class
 com/cqh/handler/ControllerExceptionHandler.class
 com/cqh/service/TypeServiceImpl.class
+com/cqh/service/AiServiceImpl.class
 com/cqh/web/admin/BlogController.class
 com/cqh/dao/BlogRepository.class
 com/cqh/aspect/LogAspect.class

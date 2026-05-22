@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.cqh.web.AboutShowControllerTest" time="0.005" tests="1" errors="0" skipped="0" failures="0">
+<testsuite name="com.cqh.web.AboutShowControllerTest" time="0.004" tests="1" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
     <property name="sun.boot.library.path" value="/Library/Java/JavaVirtualMachines/jdk-1.8.jdk/Contents/Home/jre/lib"/>
@@ -34,6 +34,7 @@
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="os.version" value="26.5"/>
     <property name="library.jansi.path" value="/Users/qinhaochang/Tool/apache-maven-3.9.9/lib/jansi-native"/>
+    <property name="http.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="user.home" value="/Users/qinhaochang"/>
     <property name="user.timezone" value="America/Los_Angeles"/>
     <property name="java.awt.printerjob" value="sun.lwawt.macosx.CPrinterJob"/>
@@ -59,7 +60,9 @@
     <property name="java.vendor.url.bug" value="https://bugreport.sun.com/bugreport/"/>
     <property name="sun.cpu.endian" value="little"/>
     <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
+    <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+    <property name="ftp.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="sun.cpu.isalist" value=""/>
   </properties>
-  <testcase name="about_returnsAboutView" classname="com.cqh.web.AboutShowControllerTest" time="0.005"/>
+  <testcase name="about_returnsAboutView" classname="com.cqh.web.AboutShowControllerTest" time="0.004"/>
 </testsuite>

@@ -15,6 +15,7 @@
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/dao/BlogRepository.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/po/Type.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/service/CommentServiceImpl.java
+/Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/service/AiServiceImpl.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/service/TagServiceImpl.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/dao/UserRepository.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/util/MD5Utils.java
@@ -29,6 +30,7 @@
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/vo/BlogQuery.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/BlogApplication.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/handler/ControllerExceptionHandler.java
+/Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/service/AiService.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/dao/CommentRepository.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/po/User.java
 /Users/qinhaochang/Desktop/blog/src/main/java/com/cqh/aspect/LogAspect.java
