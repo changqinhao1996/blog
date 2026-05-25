@@ -1,0 +1,49 @@
+name: Tests
+
+# Run the full test suite for every pull request and every push to main.
+# When configured as a required status check (see docs/CI_SETUP.md), a failing
+# run blocks the PR from being merged.
+on:
+  pull_request:
+    branches:
+      - main
+      - '0.0.*'
+  push:
+    branches:
+      - main
+
+# Cancel an in-progress run for the same branch/PR when a new commit arrives,
+# so we don't burn CI minutes on stale work.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: mvn test (JDK 8)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          # Spring Boot 1.5.7 + javax.* APIs require Java 8
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run unit tests
+        # -B = batch mode (no progress bars in CI logs)
+        # All tests use Mockito mocks / MockMvc standalone setup, so no DB is needed.
+        run: mvn -B -ntp test
+
+      - name: Upload surefire reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          retention-days: 7
