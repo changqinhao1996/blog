@@ -7,6 +7,8 @@ import com.cqh.po.Type;
 import com.cqh.util.MarkdownUtils;
 import com.cqh.util.MyBeanUtils;
 import com.cqh.vo.BlogQuery;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,7 +25,11 @@ import java.util.*;
 @Service
 public class BlogServiceImpl implements BlogService {
 
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
   @Autowired private BlogRepository blogRepository;
+
+  @Autowired private AiService aiService;
 
   @Override
   public Blog getBlog(Long id) {
@@ -124,7 +130,21 @@ public class BlogServiceImpl implements BlogService {
     } else {
       blog.setUpdateTime(new Date());
     }
-    return blogRepository.save(blog);
+    Blog saved = blogRepository.save(blog);
+    if (saved.isPublished() && (saved.getSummary() == null || saved.getSummary().isEmpty())) {
+      try {
+        String summary = aiService.generateSummary(saved.getContent());
+        if (summary != null && !summary.isEmpty()) {
+          saved.setSummary(summary);
+          blogRepository.save(saved);
+          logger.info("AI summary generated for blog: {}", saved.getTitle());
+        }
+      } catch (Exception e) {
+        logger.warn("AI summary generation failed for blog '{}', saved without summary",
+                saved.getTitle(), e);
+      }
+    }
+    return saved;
   }
 
   @Transactional

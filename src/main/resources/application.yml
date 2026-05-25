@@ -8,3 +8,8 @@ spring:
 
 comment.avatar: /images/avatar.png
 
+claude:
+  api-key: ${CLAUDE_API_KEY:}
+  model: ${CLAUDE_MODEL:claude-sonnet-4-6}
+  max-tokens: 300
+

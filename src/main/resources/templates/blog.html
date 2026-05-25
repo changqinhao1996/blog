@@ -63,7 +63,7 @@
           <div class="ui orange basic label" th:text="${blog.flag}">Original</div>
         </div>
 
-        <h2 class="ui center aligned header" th:text="${blog.title}">A Checklist on Deliberate Practice</h2>
+        <h2 class="ui center aligned header" th:text="${blog.title}">A Checklist for Deliberate Practice</h2>
         <br>
         <!--Main Content Section-->
         <div id="content" class="typo  typo-selection js-toc-content m-padded-lr-responsive m-padded-tb-large" th:utext="${blog.content}">
@@ -74,14 +74,14 @@
 
           <pre><code class="language-css">p { color: red }</code></pre>
 
-          <p>The goal of <i class="serif">Typo.css</i> is to unify typography across browsers while building a web layout best suited for long-form reading.</p>
-          <h4 >Current state and what to do:</h4>
+          <p>The goal of <i class="serif">Typo.css</i> is to normalize browser typography while building a layout best suited for comfortable on-screen reading.</p>
+          <h4 >Current state and the approach:</h4>
 
-          <p class="typo-first">Typography is a tricky problem <sup><a href="#appendix1"># Appendix 1</a></sup>. It needs careful design, yet visual designers often overlook it. Front-end engineers see these issues more often but find them hard to change, because different browsers across different operating systems render text differently and any change requires extensive regression testing. The Reset rules in commonly used base stylesheets such as
-            Yahoo, Eric Meyer, and Alice base.css do not pay enough attention to non-Latin text layout. <i class="serif">Typo.css</i> sets out to solve exactly that problem.</p>
+          <p class="typo-first">Typography is a tricky problem <sup><a href="#appendix1"># Appendix 1</a></sup> that requires careful design, yet that design is often overlooked by visual designers. Front-end engineers run into these issues more often but find them inconvenient to change, because rendering differs across browsers on multiple operating systems and any change requires a lot of regression testing time, which makes change even harder. The Reset styles commonly used in
+            Yahoo, Eric Meyer, and Alice base.css do not consider typography well. What <i class="serif">Typo.css</i> aims to do is solve those typography problems.</p>
 
           <p><strong><i class="serif">Typo.css</i> has been tested on the following platforms:</strong></p>
-          <table class="ui table" summary="List of platforms Typo.css was tested on">
+          <table class="ui table" summary="List of Typo.css test platforms">
             <thead>
             <tr>
               <th>OS / Browser</th>
@@ -143,36 +143,36 @@
             </tbody>
           </table>
 
-          <h4>Key points and difficulties of typography</h4>
+          <h4>Key points and difficulties in typography</h4>
 
-          <p>In typography for long-form text, HTML4 covers many semantic needs, but the visual side is hard to achieve with CSS alone. Examples include <abbr title="A small dot placed beneath a character to emphasize it">emphasis marks</abbr> (for example: here we <em class="typo-em">emphasize a word</em>). In HTML4, the proper-noun tag (<code>&lt;u&gt;</code>) was deprecated, while in
-            HTML5 it has been <a href="http://html5doctor.com/u-element/">brought back</a>. <i class="serif">Typo.css</i> provides matching solutions based on real-world needs. There are two important things to watch out for:</p>
+          <p>In web typography, many HTML4 semantics are well covered. But visually, it is hard to achieve some effects with CSS alone, such as the <abbr title="adds a small dot under the text">emphasis mark</abbr> (for example: <em class="typo-em">emphasizing this</em>). In HTML4 the proper-noun-underline tag (<code>&lt;u&gt;</code>) was deprecated, and in
+            HTML5 it has been <a href="http://html5doctor.com/u-element/">reintroduced</a>. <i class="serif">Typo.css</i> also provides solutions matched to real-world situations. Two important things to watch for are:</p>
           <ol>
-            <li>Semantics: whether the intended usage and styling align with the conventions of the text you are setting.</li>
-            <li>Presentation: whether the font, size, and scaling render in different browsers the way the layout expects.</li>
+            <li>Semantics: whether the usage and style attached to each semantic tag are consistent with typographic conventions</li>
+            <li>Presentation: whether font, size, and scaling behave as the typography expects across browsers</li>
           </ol>
-          <p>The notes on what <i class="serif">Typo.css</i> focuses on are all collected in the appendix; see:</p>
+          <p>For these, the typography focus points of the <i class="serif">Typo.css</i> project have all been added to the appendix. See:</p>
           <blockquote>
             <b>Appendix 1</b>: <a href="#appendix1"><i class="serif">Typo.css</i> typography focus points</a>
           </blockquote>
 
-          <p>There are already projects, like Baixing.com, that adopt <i class="serif">Typo.css</i> across the board. Test platform coverage is still incomplete, especially on <abbr title="phones, tablets, and other mobile platforms">mobile</abbr> where the major platforms have not all been covered yet. Anyone willing to help is welcome to join the testing effort or contribute to <i class="serif">Typo.css</i>
-            development. How to join: <a href="https://github.com/sofish/Typo.css">Contribute to <i class="serif">Typo.css</i></a>. Criticism, suggestions, and feedback are always welcome — open an <a
-                    href="https://github.com/sofish/Typo.css/issues">issue</a> on GitHub, or send <abbr title="Sofish Lin, author of Typo.css"
+          <p>There are already projects making full use of <i class="serif">Typo.css</i>, but test platform coverage, especially on <abbr title="phones, tablets, and other mobile platforms">mobile</abbr>, has not yet reached the major platforms. We hope capable contributors will join the testing effort or get involved in <i class="serif">Typo.css</i>
+            development. To get started: <a href="https://github.com/sofish/Typo.css">contribute to <i class="serif">Typo.css</i></a>. If you have critiques, suggestions, or feedback, feel free to file <a
+                    href="https://github.com/sofish/Typo.css/issues">issues</a> directly on GitHub, or send <abbr title="Sofish Lin, author of Typo.css"
                                                                                         role="author">me</abbr> an <a
                     href="mailto:sofish@icloud.com">email</a>.</p>
 
 
           <h2 id="section2">2. Typography examples:</h2>
 
-          <p>Two typography examples are provided. The first comes from a classical-style article curated by <cite class="typo-unique">Zhang Yanying</cite>; because that kind of writing involves many typographic elements, a single chapter is used as the demo. The second is the classic
-            Lorem Ipsum text, with code blocks and lists added to cover the most common layout elements.</p>
+          <p>Two typography examples are provided below. The first is a classical-text example drawn from <cite class="typo-unique">an annotated edition</cite> of the Analects; because classical text typography involves many elements, the opening passage of the "Xue Er" chapter is used as the demonstration. The second is the classic
+            Lorem Ipsum, with code blocks and lists added as representative typographic elements.</p>
 
-          <h3 id="section2-1">Example 1: An opening chapter from a classic text</h3>
+          <h3 id="section2-1">Example 1: Analects, "Xue Er", chapter one</h3>
 
           <p>
-            <small><b>Author:</b> <abbr title="Personal name Qiu, courtesy name Zhongni">Confucius</abbr> (
-              <time>September 28, 551 BC – April 11, 479 BC</time>
+            <small><b>Author:</b> <abbr title="given name Qiu, courtesy name Zhongni">Confucius</abbr> (
+              <time>28 September 551 BC – 11 April 479 BC</time>
               )
             </small>
           </p>
@@ -180,25 +180,25 @@
           <h4>Introduction to this chapter</h4>
 
           <p>
-            This is the opening chapter of a well-known classical collection. Chapters in the collection are typically named after the first few characters of their opening sentence. The chapter contains sixteen short passages covering a wide range of topics. The central themes include daily self-reflection, mindful use of resources and care for others, the value of harmony in ritual, and moral concepts such as benevolence, filial piety, and trustworthiness. </p>
+            "Xue Er" is the title of the first chapter of the Analects. Each chapter of the Analects is generally named after the first two or three characters of its opening passage. The "Xue Er" chapter contains 16 sections and covers many subjects. Its main themes are "I examine myself three times a day"; "be frugal and love people, employ them at the right time"; "in the use of ritual, harmony is most valued"; together with benevolence, filial piety, trustworthiness, and other moral categories. </p>
 
-          <h4>Original passage</h4>
+          <h4>Original text</h4>
 
-          <p>The teacher said: "Is it not a pleasure to study and to put what you learn into practice from time to time? Is it not a joy when like-minded friends come from afar? Is it not the mark of a noble person to remain unbothered when others do not recognize you?" </p>
+          <p>The Master said: "Is it not a pleasure to learn and to put what one has learned into practice from time to time? Is it not a joy to have like-minded friends come from afar? Is it not the mark of a gentleman that one does not resent being unrecognized by others?" </p>
 
           <h4>Translation</h4>
 
-          <p>The teacher said: "Reviewing and practicing what you have learned — is that not a happy thing? When kindred spirits travel from afar to see you — is that not a delight? When people fail to understand you and you do not resent them — is that not the conduct of a virtuous person?" </p>
+          <p>Confucius said: "Is it not delightful to study and practice frequently what you have learned? Is it not a pleasure to have like-minded friends come from far away? When others do not understand me, I feel no resentment or anger — is that not the mark of a virtuous gentleman?" </p>
 
           <h4>Commentary</h4>
 
-          <p>The Song-dynasty scholar <u class="typo-u">Zhu Xi</u> rated this chapter very highly, calling it "the gateway to the way and the foundation of virtue." The three sentences are familiar to almost everyone. The traditional reading is: studying and then revisiting what you have learned is a happy thing, and so on — three lines, three meanings, with little connection between them. Other readers argue this misses the original sense and suggest that "study" here refers not to study itself but to one's teachings or beliefs; "time" refers not to "often" but to one's era or society; and "practice" means not review but adoption. On that reading the three sentences are connected: if society adopts <abbr
-                  title="Zhang Yanying">one's</abbr> teachings, that is wonderful; if it does not, but friends who share one's views travel from afar to discuss them, that is still a delight; and even if society does not adopt them and people do not understand, remaining unresentful is itself the conduct of a virtuous person. (See an article in the sixth 1986 issue of a regional academic journal.) This reading is internally consistent and has some merit; it is offered as a reference for readers thinking through this chapter.
+          <p>The famous Song-dynasty scholar <u class="typo-u">Zhu Xi</u> placed great value on this chapter, calling it "the gateway to the Way and the foundation of virtue." These three sentences are very familiar to most readers. The traditional reading goes: after learning, reviewing and practicing regularly — is that not a pleasure? — and so on. Each of the three sentences carries its own meaning, and the sentences are not strongly connected. But some have argued this reading does not match the original sense, pointing out that "learning" here does not mean studying, but rather a doctrine or position; "time" does not mean "frequently" but rather "the era" or "society"; and "practice" does not mean review but use, extended to mean adoption. Moreover, these three sentences are not isolated, but flow into one another. Their meaning then becomes: if my own teachings are adopted by society, that is a great joy; failing that, if many friends agree with <abbr
+                  title="the annotator">my</abbr> teachings and come to discuss them, I also feel happiness; and stepping back further, even if society does not adopt them and people do not understand me, I feel no resentment — is that not the mark of a gentleman? (See the article in the Qi-Lu Journal, 1986, issue 6.) This reading is internally consistent and has some merit, offered here for readers' reference when interpreting the chapter.
           </p>
 
-          <p>Separately, on the phrase "people do not understand and yet one is not resentful," some readers note that the phrase has no explicit object — not understand what? Because the original speaker had a specific context in mind, he did not need to spell it out; his listeners understood, but later readers were left to guess. One suggestion is that the phrase continues from the previous one: a friend comes from afar to ask for guidance, I explain it and he still does not grasp it, yet I am not resentful. On that reading, "people do not understand" simply means "people do not understand what I am explaining." That reading feels a little forced.</p>
+          <p>In addition, in interpreting the line "others do not know, yet one is not resentful," some commentators have noted that the line has no explicit object — others do not know what, exactly? Because Confucius spoke within a specific context at the time, he did not need to spell out what was known; his audience would have understood, but later generations are left with a puzzle. Some say this line follows directly from the one before: a friend comes from afar to seek instruction, I explain, he still does not understand, yet I feel no resentment. On that reading, "others do not know" means "others do not understand what I am explaining." This interpretation feels a bit strained.</p>
 
-          <p>In sum, this chapter presents learning as a source of joy and remaining unresentful when others do not understand. It reflects the speaker's love of learning, tireless teaching, attention to personal cultivation, and high standards for himself. These ideas recur throughout the rest of the collection and help readers understand this opening chapter more deeply.</p>
+          <p>In summary, this chapter holds up learning as a source of joy and being unbothered by others' lack of recognition, reflecting Confucius's view that one should never tire of learning, never grow weary of teaching, focus on self-cultivation, and hold oneself to a strict standard. These ideas appear in many places throughout the Analects and help illuminate the meaning of this opening chapter.</p>
 
           <h3 id="section2-2">Example 2: English typography</h3>
 
@@ -235,21 +235,21 @@
           <ul>
             <li>If you wish to succeed, you should use persistence as your good friend, experience as your reference, prudence as
               your brother and hope as your sentry.
-              <p>If you wish to succeed, take perseverance as your friend, experience as your adviser, prudence as your brother, and hope as your sentinel.</p>
+              <p>If you wish to succeed, take perseverance as your dear friend, experience as your advisor, caution as your brother, and hope as your sentry.</p>
             </li>
             <li>Sometimes one pays most for the things one gets for nothing.
-              <p>Sometimes the highest price you pay is for the things you got for free.</p>
+              <p>Sometimes a person pays the highest price for the things they get for free.</p>
             </li>
             <li>Only those who have the patience to do simple things perfectly ever acquire the skill to do difficult things
               easily.
-              <p>Only people patient enough to do simple things well end up able to do hard things with ease.</p>
+              <p>Only those with the patience to do simple work perfectly can come to handle difficult tasks with ease.</p>
             </li>
           </ul>
 
           <h4>You may want to create a perfect <code>&lt;hr /&gt;</code> line, despite the fact that there will never have one
           </h4>
           <hr/>
-          <p><abbr title="The French writer La Rochefoucauld">La Racheforcauld</abbr> said:
+          <p><abbr title="French writer La Rochefoucauld">La Racheforcauld</abbr> said:
             <mark>"Few things are impossible in themselves; and it is often for want of will, rather than of means, that man fails
               to succeed".
             </mark>
@@ -257,7 +257,7 @@
             demo you're watching now. The following code is the best way to render typo in Chinese:
           </p>
           <pre ><code class="language-css">
-/* Headings should sit close to their content and stand apart from other blocks; tune the margin accordingly */
+/* Headings should sit closer to their content and be visually distinct from other blocks; margin values should be tuned accordingly */
 h1,h2,h3,h4,h5,h6 {
     line-height:1;font-family:Arial,sans-serif;margin:1.4em 0 0.8em;
 }
@@ -267,7 +267,7 @@ h3{font-size:1.4em;}
 h4{font-size:1.2em;}
 h5,h6{font-size:1em;}
 
-/* Modern layout: keep whitespace between blocks and paragraphs */
+/* Modern typography: ensure consistent whitespace between blocks and paragraphs */
 .typo p, .typo pre, .typo ul, .typo ol, .typo dl, .typo form, .typo hr {
     margin:1em 0 0.6em;
 }
@@ -279,148 +279,148 @@ h5,h6{font-size:1em;}
           <table class="ui table" summary="Typo.css typography focus points">
             <thead>
             <tr>
-              <th>Type</th>
-              <th>Semantics</th>
+              <th>Category</th>
+              <th>Semantic</th>
               <th>Tag</th>
-              <th>What to watch out for</th>
+              <th>Notes</th>
             </tr>
             </thead>
             <tbody>
             <tr>
-              <th rowspan="15">Base tags</th>
+              <th rowspan="15">Basic tags</th>
               <td>Headings</td>
-              <td><code>h1</code> – <code>h6</code></td>
-              <td>No forced global size; in <code>.typo</code>, headings should sit close to their content and have matching size settings</td>
+              <td><code>h1</code> ~ <code>h6</code></td>
+              <td>Sizes are not forced globally; inside <code>.typo</code>, headings should sit tight against their content and use proportional sizes</td>
             </tr>
             <tr>
-              <td>Superscript / subscript</td>
+              <td>Superscript and subscript</td>
               <td><code>sup</code>/<code>sub</code></td>
-              <td>Keep consistent with typical Word-processor typography</td>
+              <td>Stays consistent with the everyday rendering of programs like Microsoft Office Word</td>
             </tr>
             <tr>
-              <td>Quotation</td>
+              <td>Quote</td>
               <td><code>blockquote</code></td>
-              <td>Display and nesting style</td>
+              <td>Display and nested styles</td>
             </tr>
             <tr>
               <td>Abbreviation</td>
               <td><code>abbr</code></td>
-              <td>Whether it is underlined, and whether the cursor turns into a help icon on <code>hover</code></td>
+              <td>Underlined throughout; cursor changes to a help pointer on <code>hover</code></td>
             </tr>
             <tr>
-              <td>Horizontal rule</td>
+              <td>Divider</td>
               <td><code>hr</code></td>
               <td>Correct <code>padding</code> and <code>margin</code> on display</td>
             </tr>
             <tr>
-              <td>Lists</td>
+              <td>List</td>
               <td><code>ul</code>/<code>ol</code>/<code>dl</code></td>
-              <td>No global <code>list-style</code>; correct alignment inside <code>.typo</code></td>
+              <td>No <code>list-style</code> globally; aligned correctly inside <code>.typo</code></td>
             </tr>
             <tr>
               <td>Definition list</td>
               <td><code>dl</code></td>
-              <td>Global <code>padding</code> and <code>margin</code> are 0; correct alignment inside <code>.typo</code></td>
+              <td>Global <code>padding</code> and <code>margin</code> set to 0; aligned correctly inside <code>.typo</code></td>
             </tr>
             <tr>
-              <td>Inputs</td>
+              <td>Form options</td>
               <td><code>input[type=radio[, checkbox]]</code></td>
-              <td>Whether they align vertically with other <code>form</code> elements</td>
+              <td>Vertically centered when laid out alongside other <code>form</code> elements</td>
             </tr>
             <tr>
               <td>Italic</td>
               <td><code>i</code></td>
-              <td>Use a single italic style; let <code>em</code> and <code>cite</code> display upright</td>
+              <td>Only one italic style is set, so <code>em</code> and <code>cite</code> render upright</td>
             </tr>
             <tr>
               <td>Emphasis</td>
               <td><code>em</code></td>
-              <td>Upright globally; inside <code>.typo</code>, render bold to match <code>b</code> and <code>strong</code></td>
+              <td>Renders upright globally; inside <code>.typo</code> it matches <code>b</code> and <code>strong</code> as bold</td>
             </tr>
             <tr>
-              <td>Strong</td>
+              <td>Stronger emphasis</td>
               <td><code>strong/b</code></td>
-              <td>Rendered bold</td>
+              <td>Renders bold</td>
             </tr>
             <tr>
               <td>Highlight</td>
               <td><code>mark</code></td>
-              <td>Like a highlighter pen</td>
+              <td>Looks like a highlighter pen</td>
             </tr>
             <tr>
               <td>Small print</td>
               <td><code>small</code></td>
-              <td>Hold at 80% of the surrounding font size with a light-grey color</td>
+              <td>Keeps the font at 80% of the correct size, with a light gray color</td>
             </tr>
             <tr>
               <td>Table</td>
               <td><code>table</code></td>
-              <td>No global borders; inside <code>table</code> show an outer border and use a light-grey header background</td>
+              <td>No lines globally; inside a <code>table</code> the outer border is shown and the header has a light gray background</td>
             </tr>
             <tr>
               <td>Code</td>
               <td><code>pre</code>/<code>code</code></td>
-              <td>Use a <code>courier</code>-family font that pairs visually with <code>serif</code> body text</td>
+              <td>Uses a <code>courier</code>-family font, kept visually consistent with the <code>serif</code> body</td>
             </tr>
             <tr>
               <th rowspan="5">Special marks</th>
               <td>Emphasis dots</td>
-              <td><em class="typo-em">Dot under each character</em></td>
-              <td>Browsers that support <code>:after</code> and <code>:before</code> can use a progressive-enhancement implementation</td>
+              <td><em class="typo-em">dot beneath the text</em></td>
+              <td>Can be progressively enhanced in browsers that support <code>:after</code> and <code>:before</code></td>
             </tr>
             <tr>
-              <td>Proper-noun underline</td>
+              <td>Proper-name underline</td>
               <td><u>Lin Jianfeng</u></td>
-              <td>Proper-noun marker with an underline; use <code>u</code> or the <code>.typo-u</code> class</td>
+              <td>Proper-name underline, with an underline, using the <code>u</code> tag or the <code>.typo-u</code> class</td>
             </tr>
             <tr>
               <td>Em dash</td>
               <td>——</td>
-              <td>Keep as a single stroke, not two</td>
+              <td>Render as a single stroke, not two</td>
             </tr>
             <tr>
-              <td>Yuan / Yen sign</td>
+              <td>Yuan sign</td>
               <td>&yen;</td>
-              <td>Use the two-bar symbol, or the HTML entity <code>&amp;yen;</code></td>
+              <td>Use the two-parallel-line symbol, or the HTML entity <code>&amp;yen;</code></td>
             </tr>
             <tr>
-              <td>Strikethrough</td>
+              <td>Strike-through</td>
               <td>
                 <del>deleted</del>
               </td>
-              <td>Render consistently across browsers; works correctly in mixed Latin / CJK text</td>
+              <td>Normalize rendering across browsers; mixed-script lines display correctly</td>
             </tr>
             <tr>
-              <th rowspan="3">Enhancement classes</th>
-              <td>Proper-noun marker</td>
+              <th rowspan="3">Utility classes</th>
+              <td>Proper-name underline</td>
               <td><code>.typo-u</code></td>
-              <td>Since <code>u</code> was deprecated in HTML4, use <code>.typo-u</code> for backward compatibility</td>
+              <td>Because <code>u</code> was deprecated in HTML4, <code>.typo-u</code> is recommended for backward compatibility</td>
             </tr>
             <tr>
-              <td>Emphasis marker</td>
+              <td>Emphasis dots</td>
               <td><code>.typo-em</code></td>
-              <td>Implements emphasis dots via <code>:after</code> and <code>:before</code></td>
+              <td>Uses <code>:after</code> and <code>:before</code> to draw emphasis dots</td>
             </tr>
             <tr>
               <td>Clear floats</td>
               <td><code>.clearfix</code></td>
-              <td>Matches the API used by typical CSS resets</td>
+              <td>API kept consistent with common CSS Reset stylesheets</td>
             </tr>
             <tr>
-              <th rowspan="5">Things to watch</th>
-              <td colspan="3">(1) Line height / leading in mixed Latin / CJK text</td>
+              <th rowspan="5">Watch out for</th>
+              <td colspan="3">(1) Line height and leading when mixing scripts</td>
             </tr>
             <tr>
-              <td colspan="3">(2) How superscript and subscript render in IE</td>
+              <td colspan="3">(2) Rendering of superscript/subscript in IE</td>
             </tr>
             <tr>
-              <td colspan="3">(3) Whether block / paragraph spacing matches the intended design</td>
+              <td colspan="3">(3) Whether the whitespace between blocks and paragraphs follows the design guidelines</td>
             </tr>
             <tr>
-              <td colspan="3">(4) Extra whitespace around input elements</td>
+              <td colspan="3">(4) The extra space issue around <code>input</code> elements</td>
             </tr>
             <tr>
-              <td colspan="3">(5) Default text color — <code>#333</code> currently renders well across browsers</td>
+              <td colspan="3">(5) Default text color; <code>#333</code> currently renders well across browsers</td>
             </tr>
             </tbody>
           </table>

@@ -49,6 +49,9 @@ public class Blog {
 
     private String description;
 
+    @Lob
+    private String summary;
+
     public Blog() {
     }
 
@@ -207,6 +210,14 @@ public class Blog {
         this.description = description;
     }
 
+    public String getSummary() {
+        return summary;
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
+    }
+
     public void init() {
         this.tagIds = tagsToIds(this.getTags());
     }
@@ -253,6 +264,7 @@ public class Blog {
                 ", comments=" + comments +
                 ", tagIds='" + tagIds + '\'' +
                 ", description='" + description + '\'' +
+                ", summary='" + summary + '\'' +
                 '}';
     }
 }

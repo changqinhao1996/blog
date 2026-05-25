@@ -28,6 +28,9 @@ public class BlogServiceImplTest {
     @Mock
     private BlogRepository blogRepository;
 
+    @Mock
+    private AiService aiService;
+
     @InjectMocks
     private BlogServiceImpl blogService;
 
@@ -290,6 +293,81 @@ public class BlogServiceImplTest {
         blogService.deleteBlog(blogId);
 
         verify(blogRepository, times(1)).delete(blogId);
+    }
+
+    @Test
+    public void testSaveBlog_published_generatesSummary() {
+        Blog newBlog = new Blog();
+        newBlog.setTitle("Published Blog");
+        newBlog.setContent("Some content about Java programming");
+        newBlog.setPublished(true);
+
+        when(blogRepository.save(any(Blog.class))).thenAnswer(invocation -> {
+            Blog b = (Blog) invocation.getArguments()[0];
+            if (b.getId() == null) b.setId(10L);
+            return b;
+        });
+        when(aiService.generateSummary("Some content about Java programming"))
+                .thenReturn("A blog about Java programming.");
+
+        Blog result = blogService.saveBlog(newBlog);
+
+        assertNotNull(result);
+        assertEquals("A blog about Java programming.", result.getSummary());
+        verify(aiService, times(1)).generateSummary("Some content about Java programming");
+        verify(blogRepository, times(2)).save(any(Blog.class)); // initial save + summary save
+    }
+
+    @Test
+    public void testSaveBlog_draft_skipsSummary() {
+        Blog draftBlog = new Blog();
+        draftBlog.setTitle("Draft Blog");
+        draftBlog.setContent("Draft content");
+        draftBlog.setPublished(false);
+
+        when(blogRepository.save(any(Blog.class))).thenReturn(draftBlog);
+
+        Blog result = blogService.saveBlog(draftBlog);
+
+        assertNotNull(result);
+        assertNull(result.getSummary());
+        verify(aiService, never()).generateSummary(anyString());
+        verify(blogRepository, times(1)).save(any(Blog.class));
+    }
+
+    @Test
+    public void testSaveBlog_published_withExistingSummary_skipsGeneration() {
+        Blog blog = new Blog();
+        blog.setTitle("Blog with summary");
+        blog.setContent("Content");
+        blog.setPublished(true);
+        blog.setSummary("Existing summary");
+
+        when(blogRepository.save(any(Blog.class))).thenReturn(blog);
+
+        Blog result = blogService.saveBlog(blog);
+
+        assertNotNull(result);
+        assertEquals("Existing summary", result.getSummary());
+        verify(aiService, never()).generateSummary(anyString());
+    }
+
+    @Test
+    public void testSaveBlog_aiFailure_savesWithoutSummary() {
+        Blog newBlog = new Blog();
+        newBlog.setTitle("Blog");
+        newBlog.setContent("Content");
+        newBlog.setPublished(true);
+
+        when(blogRepository.save(any(Blog.class))).thenReturn(newBlog);
+        when(aiService.generateSummary(anyString()))
+                .thenThrow(new RuntimeException("API unavailable"));
+
+        Blog result = blogService.saveBlog(newBlog);
+
+        assertNotNull(result);
+        assertNull(result.getSummary());
+        verify(blogRepository, times(1)).save(any(Blog.class)); // only initial save
     }
 
     @Test

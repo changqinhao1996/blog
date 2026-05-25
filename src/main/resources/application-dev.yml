@@ -12,6 +12,6 @@ spring:
 logging:
   level:
     root: info
-    com.lrm: debug
+    com.cqh: debug
   file:
-    name: log/blog-dev.log   # if on Spring Boot 3, prefer this key
+    name: log/blog-dev.log

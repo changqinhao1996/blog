@@ -57,8 +57,9 @@
         <div class="ui padded vertical segment m-padded-tb-large" th:each="blog : ${page.content}">
           <div class="ui middle aligned mobile reversed stackable grid" >
             <div class="eleven wide column">
-              <h3 class="ui header" ><a href="#" th:href="@{/blog/{id}(id=${blog.id})}" target="_blank" class="m-black" th:text="${blog.title}">Do you really understand financial freedom?</a></h3>
-              <p class="m-text" th:text="|${blog.description}......|">The key to doing anything well is to clearly and correctly understand the goal. The fact is, many of us never properly define our goals, or never even think about them, simply because everyone else is doing the same thing......</p>
+              <h3 class="ui header" ><a href="#" th:href="@{/blog/{id}(id=${blog.id})}" target="_blank" class="m-black" th:text="${blog.title}">Do you really understand what financial freedom means?</a></h3>
+              <p class="m-text" th:if="${blog.summary != null and !blog.summary.isEmpty()}" th:text="${blog.summary}"></p>
+              <p class="m-text" th:if="${blog.summary == null or blog.summary.isEmpty()}" th:text="|${blog.description}......|">The prerequisite for doing anything well is having a clear and correct understanding of the goal. In fact, many of us often have no proper definition of our goals at all, and have never even thought about them seriously, simply doing what everyone else does......</p>
               <div class="ui grid">
                 <div class="row">
                   <div class="eleven wide column">
@@ -76,7 +77,7 @@
                     </div>
                   </div>
                   <div class="right aligned five wide column">
-                    <a href="#" target="_blank" class="ui teal basic label m-padded-tiny m-text-thin" th:text="${blog.type.name}">Mindset Upgrade</a>
+                    <a href="#" target="_blank" class="ui teal basic label m-padded-tiny m-text-thin" th:text="${blog.type.name}">Cognitive Upgrade</a>
                   </div>
                 </div>
                 <div class="row">
