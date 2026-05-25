@@ -19,6 +19,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import javax.persistence.criteria.*;
 import java.util.*;
 
@@ -30,6 +32,10 @@ public class BlogServiceImpl implements BlogService {
   @Autowired private BlogRepository blogRepository;
 
   @Autowired private AiService aiService;
+
+  @Autowired(required = false) private EmbeddingService embeddingService;
+
+  @PersistenceContext private EntityManager em;
 
   @Override
   public Blog getBlog(Long id) {
@@ -144,6 +150,7 @@ public class BlogServiceImpl implements BlogService {
                 saved.getTitle(), e);
       }
     }
+    generateAndStoreEmbedding(saved);
     return saved;
   }
 
@@ -156,12 +163,50 @@ public class BlogServiceImpl implements BlogService {
     }
     BeanUtils.copyProperties(blog, b, MyBeanUtils.getNullPropertyNames(blog));
     b.setUpdateTime(new Date());
-    return blogRepository.save(b);
+    Blog saved = blogRepository.save(b);
+    generateAndStoreEmbedding(saved);
+    return saved;
   }
 
   @Transactional
   @Override
   public void deleteBlog(Long id) {
     blogRepository.delete(id);
+  }
+
+  /**
+   * Generate an embedding for the blog and persist it to the t_blog.embedding
+   * VECTOR column via {@code STRING_TO_VECTOR(?)}.
+   *
+   * <p>This is a no-op when:
+   * <ul>
+   *   <li>the blog is a draft (only published blogs are searchable),</li>
+   *   <li>no {@link EmbeddingService} bean is wired (e.g. unit tests),</li>
+   *   <li>the embedding API call fails (returns null), or</li>
+   *   <li>the database is not MySQL 9+ (the UPDATE throws and we swallow it).</li>
+   * </ul>
+   * Embedding failures never block the save — the blog has already been
+   * persisted by the caller.
+   */
+  void generateAndStoreEmbedding(Blog saved) {
+    if (saved == null || saved.getId() == null || !saved.isPublished()) return;
+    if (embeddingService == null) return;
+    try {
+      String text = (saved.getTitle() == null ? "" : saved.getTitle())
+              + "\n\n"
+              + (saved.getContent() == null ? "" : saved.getContent());
+      String vec = embeddingService.embed(text);
+      if (vec != null) {
+        em.createNativeQuery(
+                "UPDATE t_blog SET embedding = STRING_TO_VECTOR(?1) WHERE id = ?2")
+            .setParameter(1, vec)
+            .setParameter(2, saved.getId())
+            .executeUpdate();
+        logger.info("Embedding stored (STRING_TO_VECTOR) for blog id={}", saved.getId());
+      }
+    } catch (Exception e) {
+      logger.warn("Embedding generation/storage failed for blog '{}': {}",
+              saved.getTitle(), e.getMessage());
+    }
   }
 }

@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: "jdbc:mysql://127.0.0.1:3307/blog_v9?useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_0900_ai_ci&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC"
+    username: root
+    password: cy960720
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+logging:
+  level:
+    root: info
+    com.cqh: debug
+  file:
+    name: log/blog-vector.log

@@ -18,9 +18,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import java.util.*;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 
 public class BlogServiceImplTest {
@@ -30,6 +33,15 @@ public class BlogServiceImplTest {
 
     @Mock
     private AiService aiService;
+
+    @Mock
+    private EmbeddingService embeddingService;
+
+    @Mock
+    private EntityManager em;
+
+    @Mock
+    private Query vectorUpdateQuery;
 
     @InjectMocks
     private BlogServiceImpl blogService;
@@ -368,6 +380,119 @@ public class BlogServiceImplTest {
         assertNotNull(result);
         assertNull(result.getSummary());
         verify(blogRepository, times(1)).save(any(Blog.class)); // only initial save
+    }
+
+    // -------- Vector embedding tests (STRING_TO_VECTOR write path) --------
+
+    @Test
+    public void saveBlog_published_storesEmbeddingViaStringToVector() {
+        Blog newBlog = new Blog();
+        newBlog.setTitle("Vector Blog");
+        newBlog.setContent("Some content");
+        newBlog.setPublished(true);
+
+        when(blogRepository.save(any(Blog.class))).thenAnswer(invocation -> {
+            Blog b = (Blog) invocation.getArguments()[0];
+            if (b.getId() == null) b.setId(42L);
+            return b;
+        });
+        when(embeddingService.embed(anyString())).thenReturn("[0.1,0.2,0.3]");
+        when(em.createNativeQuery(anyString())).thenReturn(vectorUpdateQuery);
+        when(vectorUpdateQuery.setParameter(anyInt(), any())).thenReturn(vectorUpdateQuery);
+        when(vectorUpdateQuery.executeUpdate()).thenReturn(1);
+
+        Blog result = blogService.saveBlog(newBlog);
+
+        assertNotNull(result);
+        // Verify STRING_TO_VECTOR(?1) was issued for the right blog
+        verify(em).createNativeQuery(contains("STRING_TO_VECTOR"));
+        verify(vectorUpdateQuery).setParameter(eq(1), eq("[0.1,0.2,0.3]"));
+        verify(vectorUpdateQuery).setParameter(eq(2), eq(42L));
+        verify(vectorUpdateQuery).executeUpdate();
+    }
+
+    @Test
+    public void saveBlog_draft_skipsEmbedding() {
+        Blog draftBlog = new Blog();
+        draftBlog.setTitle("Draft");
+        draftBlog.setContent("Draft content");
+        draftBlog.setPublished(false);
+
+        when(blogRepository.save(any(Blog.class))).thenAnswer(invocation -> {
+            Blog b = (Blog) invocation.getArguments()[0];
+            if (b.getId() == null) b.setId(7L);
+            return b;
+        });
+
+        blogService.saveBlog(draftBlog);
+
+        verify(embeddingService, never()).embed(anyString());
+        verify(em, never()).createNativeQuery(anyString());
+    }
+
+    @Test
+    public void saveBlog_embeddingApiFailure_stillSavesBlog() {
+        Blog newBlog = new Blog();
+        newBlog.setTitle("Blog");
+        newBlog.setContent("Content");
+        newBlog.setPublished(true);
+
+        when(blogRepository.save(any(Blog.class))).thenAnswer(invocation -> {
+            Blog b = (Blog) invocation.getArguments()[0];
+            if (b.getId() == null) b.setId(8L);
+            return b;
+        });
+        when(embeddingService.embed(anyString()))
+                .thenThrow(new RuntimeException("Voyage down"));
+
+        // The save must still succeed — embedding failure never blocks core flow
+        Blog result = blogService.saveBlog(newBlog);
+
+        assertNotNull(result);
+        verify(em, never()).createNativeQuery(anyString());
+    }
+
+    @Test
+    public void saveBlog_embeddingReturnsNull_doesNotIssueUpdate() {
+        Blog newBlog = new Blog();
+        newBlog.setTitle("Blog");
+        newBlog.setContent("Content");
+        newBlog.setPublished(true);
+
+        when(blogRepository.save(any(Blog.class))).thenAnswer(invocation -> {
+            Blog b = (Blog) invocation.getArguments()[0];
+            if (b.getId() == null) b.setId(9L);
+            return b;
+        });
+        when(embeddingService.embed(anyString())).thenReturn(null);
+
+        blogService.saveBlog(newBlog);
+
+        verify(em, never()).createNativeQuery(anyString());
+    }
+
+    @Test
+    public void updateBlog_published_storesEmbedding() {
+        Long blogId = 1L;
+        Blog updatedBlog = new Blog();
+        updatedBlog.setTitle("Updated Title");
+        updatedBlog.setContent("Updated Content");
+        // BeanUtils.copyProperties only skips NULL props — boolean `published`
+        // (a Java primitive) can never be null, so the incoming value always
+        // wins. Set it true so the embedding branch is exercised.
+        updatedBlog.setPublished(true);
+
+        when(blogRepository.findOne(blogId)).thenReturn(testBlog); // published=true
+        when(blogRepository.save(any(Blog.class))).thenReturn(testBlog);
+        when(embeddingService.embed(anyString())).thenReturn("[0.9,0.1]");
+        when(em.createNativeQuery(anyString())).thenReturn(vectorUpdateQuery);
+        when(vectorUpdateQuery.setParameter(anyInt(), any())).thenReturn(vectorUpdateQuery);
+        when(vectorUpdateQuery.executeUpdate()).thenReturn(1);
+
+        blogService.updateBlog(blogId, updatedBlog);
+
+        verify(em).createNativeQuery(contains("STRING_TO_VECTOR"));
+        verify(vectorUpdateQuery).executeUpdate();
     }
 
     @Test

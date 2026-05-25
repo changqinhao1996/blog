@@ -472,6 +472,21 @@ h5,h6{font-size:1em;}
           </div>
         </div>
       </div>
+      <!--Related articles (vector-search powered)-->
+      <div class="ui attached segment" th:if="${related != null and !related.isEmpty()}">
+        <h3 class="ui header"><i class="random icon"></i>Related articles</h3>
+        <div class="ui relaxed divided list">
+          <div class="item" th:each="r : ${related}">
+            <i class="large file text outline middle aligned icon"></i>
+            <div class="content">
+              <a class="header" th:href="@{'/blog/' + ${r.id}}" th:text="${r.title}">Related title</a>
+              <div class="description" th:if="${r.description != null}"
+                   th:text="${#strings.abbreviate(r.description, 120)}">snippet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div  class="ui bottom attached segment" th:if="${blog.commentabled}">
         <!--Comment Section-->
         <div id="comment-container"  class="ui teal segment">

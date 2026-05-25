@@ -13,3 +13,8 @@ claude:
   model: ${CLAUDE_MODEL:claude-sonnet-4-6}
   max-tokens: 300
 
+voyage:
+  api-key: ${VOYAGE_API_KEY:}
+  model: ${VOYAGE_MODEL:voyage-3-lite}
+  dimension: 512
+

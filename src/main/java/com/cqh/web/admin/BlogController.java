@@ -6,12 +6,15 @@ import com.cqh.po.Type;
 import com.cqh.po.User;
 import com.cqh.service.AiService;
 import com.cqh.service.BlogService;
+import com.cqh.service.EmbeddingService;
 import com.cqh.service.TagService;
 import com.cqh.service.TypeService;
 import com.cqh.vo.BlogQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -20,6 +23,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import javax.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +44,9 @@ public class BlogController {
   @Autowired private TypeService typeService;
   @Autowired private TagService tagService;
   @Autowired private AiService aiService;
+
+  @Autowired(required = false) private EmbeddingService embeddingService;
+  @PersistenceContext private EntityManager em;
 
   @GetMapping("/blogs")
   public String blogs(
@@ -150,5 +158,48 @@ public class BlogController {
     blogService.deleteBlog(id);
     attributes.addFlashAttribute("message", "Deletion successful");
     return REDIRECT_LIST;
+  }
+
+  /**
+   * One-shot backfill: generate embeddings for any published blog that
+   * currently has none, and persist them via {@code STRING_TO_VECTOR()}.
+   *
+   * <p>Hit this once after running the V1 schema migration so existing rows
+   * become searchable. Requires the {@code vector} Spring profile (MySQL 9+)
+   * and a configured {@code VOYAGE_API_KEY}.
+   */
+  @GetMapping("/blogs/backfill-embeddings")
+  @ResponseBody
+  public String backfillEmbeddings() {
+    if (embeddingService == null) {
+      return "EmbeddingService not configured — set VOYAGE_API_KEY and restart.";
+    }
+    int considered = 0, written = 0, skipped = 0, failed = 0;
+    Page<Blog> page = blogService.listBlog(new PageRequest(0, 10_000));
+    for (Blog b : page.getContent()) {
+      if (!b.isPublished()) { skipped++; continue; }
+      considered++;
+      try {
+        String text = (b.getTitle() == null ? "" : b.getTitle())
+                + "\n\n"
+                + (b.getContent() == null ? "" : b.getContent());
+        String vec = embeddingService.embed(text);
+        if (vec == null) { failed++; continue; }
+        em.createNativeQuery(
+                "UPDATE t_blog SET embedding = STRING_TO_VECTOR(?1) WHERE id = ?2")
+            .setParameter(1, vec)
+            .setParameter(2, b.getId())
+            .executeUpdate();
+        written++;
+      } catch (Exception e) {
+        logger.warn("Backfill failed for blog id={}: {}", b.getId(), e.getMessage());
+        failed++;
+      }
+    }
+    String msg = String.format(
+        "Backfill complete — considered=%d, written=%d, skipped(draft)=%d, failed=%d",
+        considered, written, skipped, failed);
+    logger.info(msg);
+    return msg;
   }
 }
