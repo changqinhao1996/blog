@@ -37,8 +37,15 @@ jobs:
 
       - name: Run unit tests
         # -B = batch mode (no progress bars in CI logs)
-        # All tests use Mockito mocks / MockMvc standalone setup, so no DB is needed.
-        run: mvn -B -ntp test
+        # Selects every class ending in *Test (singular). BlogApplicationTests
+        # is the only *Tests (plural) and is intentionally excluded — it's a
+        # full @SpringBootTest that loads the real ApplicationContext, which
+        # validates MySQL-specific JPQL (e.g. date_format()) so it can't run
+        # without a live MySQL server. All other tests are pure unit tests
+        # using Mockito mocks / MockMvc standalone setup — no DB needed.
+        # (Surefire 2.18.1 doesn't support the `!Pattern` negation syntax,
+        # which is why we filter by naming convention instead.)
+        run: mvn -B -ntp test -Dtest='*Test'
 
       - name: Upload surefire reports on failure
         if: failure()

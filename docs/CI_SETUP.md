@@ -31,17 +31,48 @@ will be greyed out until the `mvn test` check is green.
 
 | Trigger | Action |
 |---|---|
-| PR opened/updated against `main` or `0.0.*` | Runs full test suite on the PR's HEAD |
+| PR opened/updated against `main` or `0.0.*` | Runs the unit-test suite on the PR's HEAD |
 | Push to `main` | Runs tests as a final safety check after merge |
 | New commit to an open PR | Cancels the previous still-running build |
 | Tests fail | Surefire XML reports uploaded as artifacts (kept 7 days) for triage |
 
+## What CI runs (and what it skips)
+
+CI runs:
+
+```bash
+mvn -B -ntp test -Dtest='*Test'
+```
+
+That matches every class ending in `*Test` (singular) — all ~199 unit tests.
+The pattern intentionally excludes `BlogApplicationTests` (the only class
+ending in `*Tests`, plural). It's a full `@SpringBootTest` that boots the
+entire ApplicationContext, which in turn asks Hibernate to validate every
+JPQL query in `BlogRepository` — and one of those (`findGroupYear()`) uses
+MySQL's `date_format()` function. Without a live MySQL server on the runner,
+that validation fails. Substituting H2 doesn't help because H2 has no
+`date_format()` function.
+
+Every other test is a pure unit test using Mockito mocks or standalone
+`MockMvc`, so they need no database and run cleanly in CI.
+
+Surefire 2.18.1 (this project's version) doesn't support `!Pattern`
+negation, so we filter by the naming convention instead. If the project
+ever adds another `*Tests` (plural) class, decide explicitly whether it
+needs a DB and either rename it to `*Test` or update the workflow.
+
 ## Local verification
 
-The same command runs locally:
+Run the full suite (including `BlogApplicationTests`) when MySQL is up:
 
 ```bash
 mvn -B -ntp test
+```
+
+Or replicate exactly what CI does:
+
+```bash
+mvn -B -ntp test -Dtest='*Test'
 ```
 
 This needs JDK 8 on your `PATH`. Other JDK versions may compile but the
