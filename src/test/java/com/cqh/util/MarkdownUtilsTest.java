@@ -50,13 +50,13 @@ public class MarkdownUtilsTest {
 
     @Test
     public void testMarkdownToHtmlExtensionsWithLink() {
-        String markdown = "[imCoding 爱编程](http://www.lirenmi.cn)";
+        String markdown = "[imCoding Loves Coding](http://www.example.com)";
         String result = MarkdownUtils.markdownToHtmlExtensions(markdown);
 
         assertNotNull(result);
         assertTrue("Link should have target=\"_blank\"", result.contains("target=\"_blank\""));
-        assertTrue(result.contains("imCoding 爱编程"));
-        assertTrue(result.contains("http://www.lirenmi.cn"));
+        assertTrue(result.contains("imCoding Loves Coding"));
+        assertTrue(result.contains("http://www.example.com"));
     }
 
     @Test
@@ -85,17 +85,17 @@ public class MarkdownUtilsTest {
 
     @Test
     public void testMarkdownToHtmlExtensionsWithComplexTable() {
-        String markdown = "| hello | hi   | 哈哈哈   |\n" +
-                          "| ----- | ---- | ----- |\n" +
-                          "| 斯维尔多  | 士大夫  | f啊    |\n" +
-                          "| 阿什顿发  | 非固定杆 | 撒阿什顿发 |";
+        String markdown = "| hello | hi    | hahaha   |\n" +
+                          "| ----- | ----- | -------- |\n" +
+                          "| alpha | bravo | charlie  |\n" +
+                          "| delta | echo  | foxtrot  |";
         String result = MarkdownUtils.markdownToHtmlExtensions(markdown);
 
         assertNotNull(result);
         assertTrue(result.contains("<table"));
         assertTrue(result.contains("ui celled table"));
         assertTrue(result.contains("hello"));
-        assertTrue(result.contains("哈哈哈"));
+        assertTrue(result.contains("hahaha"));
     }
 
     @Test
