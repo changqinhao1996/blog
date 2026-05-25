@@ -47,8 +47,8 @@ public class MD5UtilsTest {
     }
 
     @Test
-    public void testCodeWithChineseCharacters() {
-        String input = "中文测试";
+    public void testCodeWithUnicodeCharacters() {
+        String input = "unicode test éüñ";
         String result = MD5Utils.code(input);
         assertNotNull(result);
         assertEquals(32, result.length());
