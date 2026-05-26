@@ -169,6 +169,57 @@ public class AiServiceImplTest {
         assertFalse(aiService.isConfigured());
     }
 
+    // --- generateDescription tests ---
+
+    @Test
+    public void generateDescription_returnsText() throws Exception {
+        String responseJson = "{\"content\":[{\"type\":\"text\",\"text\":\"A short blog about Java.\"}]}";
+        mockServer.expect(requestTo("https://api.anthropic.com/v1/messages"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        String result = aiService.generateDescription("blog content");
+        assertEquals("A short blog about Java.", result);
+        mockServer.verify();
+    }
+
+    @Test
+    public void generateDescription_nullContent_returnsNull() {
+        assertNull(aiService.generateDescription(null));
+    }
+
+    @Test
+    public void generateDescription_emptyContent_returnsNull() {
+        assertNull(aiService.generateDescription("   "));
+    }
+
+    @Test
+    public void generateDescription_apiError_returnsNull() {
+        mockServer.expect(requestTo("https://api.anthropic.com/v1/messages"))
+                .andRespond(withServerError());
+        assertNull(aiService.generateDescription("content"));
+    }
+
+    @Test
+    public void generateDescription_noApiKey_returnsNull() {
+        ReflectionTestUtils.setField(aiService, "apiKey", "");
+        assertNull(aiService.generateDescription("content"));
+    }
+
+    @Test
+    public void generateDescription_truncatesAt200Chars() throws Exception {
+        StringBuilder longText = new StringBuilder();
+        for (int i = 0; i < 250; i++) longText.append("a");
+        String responseJson = "{\"content\":[{\"type\":\"text\",\"text\":\"" + longText + "\"}]}";
+        mockServer.expect(requestTo("https://api.anthropic.com/v1/messages"))
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        String result = aiService.generateDescription("content");
+        assertNotNull(result);
+        assertEquals(200, result.length());
+        assertTrue(result.endsWith("..."));
+    }
+
     // --- callClaudeApi tests ---
 
     @Test

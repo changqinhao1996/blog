@@ -370,6 +370,98 @@ public class BlogServiceImplTest {
         verify(blogRepository, times(1)).save(any(Blog.class)); // only initial save
     }
 
+    // --- description auto-generation tests ---
+
+    @Test
+    public void saveBlog_published_blankDescription_generatesViaAi() {
+        Blog newBlog = new Blog();
+        newBlog.setTitle("Blog");
+        newBlog.setContent("Some Java content");
+        newBlog.setPublished(true);
+        // description left null
+
+        when(blogRepository.save(any(Blog.class))).thenAnswer(invocation -> {
+            Blog b = (Blog) invocation.getArguments()[0];
+            if (b.getId() == null) b.setId(20L);
+            return b;
+        });
+        when(aiService.generateDescription("Some Java content"))
+                .thenReturn("AI-generated description");
+
+        Blog result = blogService.saveBlog(newBlog);
+
+        assertNotNull(result);
+        assertEquals("AI-generated description", result.getDescription());
+        verify(aiService, times(1)).generateDescription("Some Java content");
+    }
+
+    @Test
+    public void saveBlog_published_authorDescription_skipsAi() {
+        Blog newBlog = new Blog();
+        newBlog.setTitle("Blog");
+        newBlog.setContent("Content");
+        newBlog.setPublished(true);
+        newBlog.setDescription("Author wrote this description");
+
+        when(blogRepository.save(any(Blog.class))).thenAnswer(invocation -> {
+            Blog b = (Blog) invocation.getArguments()[0];
+            if (b.getId() == null) b.setId(21L);
+            return b;
+        });
+
+        Blog result = blogService.saveBlog(newBlog);
+
+        assertEquals("Author wrote this description", result.getDescription());
+        verify(aiService, never()).generateDescription(anyString());
+    }
+
+    @Test
+    public void saveBlog_draft_blankDescription_skipsAi() {
+        Blog draft = new Blog();
+        draft.setTitle("Draft");
+        draft.setContent("Content");
+        draft.setPublished(false);
+
+        when(blogRepository.save(any(Blog.class))).thenReturn(draft);
+
+        Blog result = blogService.saveBlog(draft);
+
+        assertNull(result.getDescription());
+        verify(aiService, never()).generateDescription(anyString());
+    }
+
+    @Test
+    public void saveBlog_published_descriptionAiFailure_savesWithoutDescription() {
+        Blog newBlog = new Blog();
+        newBlog.setTitle("Blog");
+        newBlog.setContent("Content");
+        newBlog.setPublished(true);
+
+        when(blogRepository.save(any(Blog.class))).thenReturn(newBlog);
+        when(aiService.generateDescription(anyString()))
+                .thenThrow(new RuntimeException("API down"));
+
+        Blog result = blogService.saveBlog(newBlog);
+
+        assertNotNull(result);
+        assertNull(result.getDescription());
+    }
+
+    @Test
+    public void saveBlog_published_descriptionReturnsEmpty_keepsNull() {
+        Blog newBlog = new Blog();
+        newBlog.setTitle("Blog");
+        newBlog.setContent("Content");
+        newBlog.setPublished(true);
+
+        when(blogRepository.save(any(Blog.class))).thenReturn(newBlog);
+        when(aiService.generateDescription(anyString())).thenReturn("");
+
+        Blog result = blogService.saveBlog(newBlog);
+
+        assertNull(result.getDescription());
+    }
+
     @Test
     public void testListBlogWithEmptyQuery() {
         Pageable pageable = new PageRequest(0, 10);
