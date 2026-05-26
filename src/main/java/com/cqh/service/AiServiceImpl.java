@@ -94,6 +94,40 @@ public class AiServiceImpl implements AiService {
         return Collections.emptyList();
     }
 
+    @Override
+    public String generateDescription(String blogContent) {
+        if (!isConfigured()) {
+            logger.warn("Claude API key not configured, skipping description generation");
+            return null;
+        }
+        if (blogContent == null || blogContent.trim().isEmpty()) {
+            return null;
+        }
+
+        String prompt = "Write a single concise sentence (under 200 characters) "
+                + "that describes what the following blog post is about. "
+                + "It will be shown as preview text on list pages, so make it "
+                + "engaging and informative. Return ONLY the sentence — no "
+                + "quotes, no labels, no markdown.\n\n"
+                + blogContent;
+
+        try {
+            String response = callClaudeApi(prompt);
+            if (response != null && !response.trim().isEmpty()) {
+                String cleaned = response.trim();
+                // Belt-and-braces: the DB column may be VARCHAR(200), so cap it.
+                if (cleaned.length() > 200) {
+                    cleaned = cleaned.substring(0, 197) + "...";
+                }
+                logger.info("AI description generated successfully ({} chars)", cleaned.length());
+                return cleaned;
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to generate AI description: {}", e.getMessage());
+        }
+        return null;
+    }
+
     /**
      * Call the Claude Messages API and return the text content of the first response block.
      */

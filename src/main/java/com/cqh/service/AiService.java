@@ -20,4 +20,13 @@ public interface AiService {
      * @return list of suggested tag names (subset of existingTagNames), or empty list on failure
      */
     List<String> suggestTagNames(String blogContent, List<String> existingTagNames);
+
+    /**
+     * Generate a short one-sentence description for the blog (used as the card
+     * preview text on list pages when the author has not written one).
+     *
+     * @param blogContent the raw blog content (markdown)
+     * @return the generated description (≤ ~200 chars), or null on failure / when not configured
+     */
+    String generateDescription(String blogContent);
 }

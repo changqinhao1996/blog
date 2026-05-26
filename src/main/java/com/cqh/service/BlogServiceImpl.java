@@ -131,18 +131,35 @@ public class BlogServiceImpl implements BlogService {
       blog.setUpdateTime(new Date());
     }
     Blog saved = blogRepository.save(blog);
+    boolean changed = false;
     if (saved.isPublished() && (saved.getSummary() == null || saved.getSummary().isEmpty())) {
       try {
         String summary = aiService.generateSummary(saved.getContent());
         if (summary != null && !summary.isEmpty()) {
           saved.setSummary(summary);
-          blogRepository.save(saved);
+          changed = true;
           logger.info("AI summary generated for blog: {}", saved.getTitle());
         }
       } catch (Exception e) {
         logger.warn("AI summary generation failed for blog '{}', saved without summary",
                 saved.getTitle(), e);
       }
+    }
+    if (saved.isPublished() && isBlank(saved.getDescription())) {
+      try {
+        String desc = aiService.generateDescription(saved.getContent());
+        if (desc != null && !desc.isEmpty()) {
+          saved.setDescription(desc);
+          changed = true;
+          logger.info("AI description generated for blog: {}", saved.getTitle());
+        }
+      } catch (Exception e) {
+        logger.warn("AI description generation failed for blog '{}', saved without description",
+                saved.getTitle(), e);
+      }
+    }
+    if (changed) {
+      blogRepository.save(saved);
     }
     return saved;
   }
@@ -156,7 +173,26 @@ public class BlogServiceImpl implements BlogService {
     }
     BeanUtils.copyProperties(blog, b, MyBeanUtils.getNullPropertyNames(blog));
     b.setUpdateTime(new Date());
-    return blogRepository.save(b);
+    Blog saved = blogRepository.save(b);
+    // If a published blog has no description (author cleared it or never set
+    // it), generate one via Claude. Drafts are skipped.
+    if (saved.isPublished() && isBlank(saved.getDescription())) {
+      try {
+        String desc = aiService.generateDescription(saved.getContent());
+        if (desc != null && !desc.isEmpty()) {
+          saved.setDescription(desc);
+          blogRepository.save(saved);
+          logger.info("AI description regenerated on update for blog: {}", saved.getTitle());
+        }
+      } catch (Exception e) {
+        logger.warn("AI description regeneration failed for blog '{}'", saved.getTitle(), e);
+      }
+    }
+    return saved;
+  }
+
+  private static boolean isBlank(String s) {
+    return s == null || s.trim().isEmpty();
   }
 
   @Transactional
