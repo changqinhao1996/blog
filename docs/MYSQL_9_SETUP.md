@@ -78,8 +78,15 @@ succeed and the search falls back to keyword matching.)
 
 ```bash
 cd /Users/qinhaochang/Desktop/blog
-mvn spring-boot:run -Dspring-boot.run.profiles=vector
+mvn spring-boot:run -Drun.profiles=vector
 ```
+
+> **Note (Spring Boot 1.5.x):** the profile flag is `-Drun.profiles=vector`.
+> The `-Dspring-boot.run.profiles=...` form only works on Spring Boot 2.x and
+> is **silently ignored** here — the app would start on the default `dev`
+> profile against MySQL 8.4. To also run on a non-default HTTP port (e.g. so it
+> can coexist with a `dev` instance already on 8080), add
+> `-Drun.jvmArguments="-Dserver.port=8081"`.
 
 On first start, JPA's `ddl-auto: update` will create `t_blog` and friends in
 `blog_v9`. Hibernate **cannot** synthesise the `VECTOR(512)` DDL, so the next
@@ -148,7 +155,8 @@ Nothing on 8.4 was changed by any of these steps.
 |---|---|
 | Start MySQL 9 | `mysqld --defaults-file=~/.mysql9/my.cnf &` |
 | Stop MySQL 9 | `mysqladmin -P 3307 -h 127.0.0.1 -u root -p shutdown` |
-| Run blog on MySQL 9 | `mvn spring-boot:run -Dspring-boot.run.profiles=vector` |
+| Run blog on MySQL 9 | `mvn spring-boot:run -Drun.profiles=vector` |
+| Run blog on MySQL 9 (alt port) | `mvn spring-boot:run -Drun.profiles=vector -Drun.jvmArguments="-Dserver.port=8081"` |
 | Run blog on MySQL 8.4 | `mvn spring-boot:run` |
 | Connect to MySQL 9 | `mysql -P 3307 -h 127.0.0.1 -u root -p blog_v9` |
 | Connect to MySQL 8.4 | `mysql -P 3306 -h 127.0.0.1 -u root -p blog` |

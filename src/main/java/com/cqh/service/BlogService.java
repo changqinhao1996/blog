@@ -33,4 +33,11 @@ public interface BlogService {
     Blog updateBlog(Long id,Blog blog);
 
     void deleteBlog(Long id);
+
+    /**
+     * Persist a pre-computed embedding to t_blog.embedding via STRING_TO_VECTOR().
+     * Runs in its own transaction so it can be called safely from non-transactional
+     * callers (e.g. the admin backfill endpoint).
+     */
+    void storeEmbedding(Long id, String vec);
 }

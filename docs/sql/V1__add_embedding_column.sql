@@ -2,7 +2,7 @@
 -- V1 — Add embedding column to t_blog (MySQL 9.0+ only)
 -- =====================================================================
 -- Apply ONCE, after Spring Boot has created the t_blog table on the first
--- `mvn spring-boot:run -Dspring-boot.run.profiles=vector` run.
+-- `mvn spring-boot:run -Drun.profiles=vector` run.
 --
 -- Hibernate cannot generate the VECTOR DDL, so this lives outside JPA.
 -- =====================================================================

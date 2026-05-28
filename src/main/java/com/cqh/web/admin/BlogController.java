@@ -23,8 +23,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +44,6 @@ public class BlogController {
   @Autowired private AiService aiService;
 
   @Autowired(required = false) private EmbeddingService embeddingService;
-  @PersistenceContext private EntityManager em;
 
   @GetMapping("/blogs")
   public String blogs(
@@ -185,11 +182,9 @@ public class BlogController {
                 + (b.getContent() == null ? "" : b.getContent());
         String vec = embeddingService.embed(text);
         if (vec == null) { failed++; continue; }
-        em.createNativeQuery(
-                "UPDATE t_blog SET embedding = STRING_TO_VECTOR(?1) WHERE id = ?2")
-            .setParameter(1, vec)
-            .setParameter(2, b.getId())
-            .executeUpdate();
+        // Persist via a @Transactional service method — a native executeUpdate()
+        // needs an active transaction, which this controller method does not have.
+        blogService.storeEmbedding(b.getId(), vec);
         written++;
       } catch (Exception e) {
         logger.warn("Backfill failed for blog id={}: {}", b.getId(), e.getMessage());

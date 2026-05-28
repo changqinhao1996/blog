@@ -197,16 +197,31 @@ public class BlogServiceImpl implements BlogService {
               + (saved.getContent() == null ? "" : saved.getContent());
       String vec = embeddingService.embed(text);
       if (vec != null) {
-        em.createNativeQuery(
-                "UPDATE t_blog SET embedding = STRING_TO_VECTOR(?1) WHERE id = ?2")
-            .setParameter(1, vec)
-            .setParameter(2, saved.getId())
-            .executeUpdate();
+        storeEmbedding(saved.getId(), vec);
         logger.info("Embedding stored (STRING_TO_VECTOR) for blog id={}", saved.getId());
       }
     } catch (Exception e) {
       logger.warn("Embedding generation/storage failed for blog '{}': {}",
               saved.getTitle(), e.getMessage());
     }
+  }
+
+  /**
+   * Persist a pre-computed embedding string to the VECTOR column.
+   *
+   * <p>Annotated {@code @Transactional} because a native {@code executeUpdate()}
+   * requires an active transaction. When invoked from {@code saveBlog}/
+   * {@code updateBlog} it simply joins their transaction; when invoked from a
+   * non-transactional caller (the admin backfill endpoint) the proxy opens a
+   * short transaction just for this UPDATE.
+   */
+  @Transactional
+  @Override
+  public void storeEmbedding(Long id, String vec) {
+    em.createNativeQuery(
+            "UPDATE t_blog SET embedding = STRING_TO_VECTOR(?1) WHERE id = ?2")
+        .setParameter(1, vec)
+        .setParameter(2, id)
+        .executeUpdate();
   }
 }
