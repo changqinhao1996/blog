@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head th:replace="_fragments :: head(~{::title})">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ask the Blog</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/semantic-ui/2.2.4/semantic.min.css">
+  <link rel="stylesheet" href="../static/css/me.css">
+</head>
+<body>
+
+  <!--Navigation-->
+  <nav th:replace="_fragments :: menu(6)" class="ui inverted attached segment m-padded-tb-mini m-shadow-small"></nav>
+
+  <!--Main Content-->
+  <div class="m-container m-padded-tb-big animated fadeIn">
+    <div class="ui container">
+
+      <!--Header-->
+      <div class="ui top attached segment">
+        <h2 class="ui teal header">
+          <i class="comments outline icon"></i>
+          <div class="content">
+            Ask my blog
+            <div class="sub header">
+              Type a question. The system retrieves the most relevant posts via vector
+              search and lets Claude answer using only their content — with citations.
+            </div>
+          </div>
+        </h2>
+      </div>
+
+      <!--Question Form-->
+      <div class="ui attached segment">
+        <form action="#" th:action="@{/ask}" method="post" class="ui form">
+          <div class="field">
+            <label>Your question</label>
+            <textarea name="question" rows="3"
+                      placeholder="e.g. How do transformers handle attention?"
+                      th:text="${question}"
+                      required></textarea>
+          </div>
+          <button type="submit" class="ui teal button">
+            <i class="search icon"></i>Ask
+          </button>
+        </form>
+      </div>
+
+      <!--Error State-->
+      <div class="ui attached red message" th:if="${ragAnswer != null and !ragAnswer.success}">
+        <div class="header">No answer</div>
+        <p th:text="${ragAnswer.error}">error message</p>
+      </div>
+
+      <!--Answer-->
+      <div class="ui attached segment" th:if="${ragAnswer != null and ragAnswer.success}">
+        <h3 class="ui header">
+          <i class="quote left icon"></i>
+          <span class="content">Answer</span>
+        </h3>
+        <div class="m-text" style="white-space: pre-wrap; line-height: 1.7;"
+             th:text="${ragAnswer.answer}">The answer goes here.</div>
+      </div>
+
+      <!--Sources used-->
+      <div class="ui attached segment" th:if="${ragAnswer != null and ragAnswer.success}">
+        <h4 class="ui header">
+          <i class="book icon"></i>
+          <span class="content">Sources (the posts the answer was grounded in)</span>
+        </h4>
+        <div class="ui relaxed divided list">
+          <div class="item" th:each="src, iter : ${ragAnswer.sources}">
+            <i class="large file text outline middle aligned icon"></i>
+            <div class="content">
+              <a class="header" th:href="@{'/blog/' + ${src.id}}" target="_blank">
+                <span th:text="'[' + ${iter.count} + '] '">[1] </span>
+                <span th:text="${src.title}">Source title</span>
+              </a>
+              <div class="description" th:if="${src.description != null and !src.description.isEmpty()}"
+                   th:text="${#strings.abbreviate(src.description, 160)}">snippet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!--How this works (collapsible explainer)-->
+      <div class="ui attached segment" th:if="${ragAnswer == null}">
+        <h4 class="ui header">
+          <i class="info circle icon"></i>
+          <span class="content">How this works</span>
+        </h4>
+        <p class="m-text">
+          This page is a Retrieval-Augmented Generation (RAG) endpoint. Your question is
+          first embedded into the same 512-dimensional space as every published blog post,
+          then ranked by cosine similarity (via MySQL 9
+          <code>VECTOR_TO_STRING()</code>). The top-5 posts become grounding context for
+          Claude, which is instructed to answer using only those posts and to cite them
+          with bracketed numbers like <code>[1]</code>. If the posts don't contain the
+          answer, Claude is told to say so rather than invent facts.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <br>
+  <br>
+
+  <!--Footer-->
+  <footer th:replace="_fragments :: footer" class="ui inverted vertical segment m-padded-tb-massive"></footer>
+
+  <!--/*/<th:block th:replace="_fragments :: script">/*/-->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/semantic-ui/2.2.4/semantic.min.js"></script>
+  <!--/*/</th:block>/*/-->
+
+  <script>
+    $('.menu.toggle').click(function () {
+      $('.m-item').toggleClass('m-mobile-hide');
+    });
+  </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 package com.cqh.service;
 
+import com.cqh.po.Blog;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -28,6 +29,10 @@ public class AiServiceImpl implements AiService {
 
     @Value("${claude.max-tokens:300}")
     private int maxTokens;
+
+    /** Larger budget for RAG answers, which need room to cite sources and explain. */
+    @Value("${claude.rag-max-tokens:800}")
+    private int ragMaxTokens;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -94,10 +99,59 @@ public class AiServiceImpl implements AiService {
         return Collections.emptyList();
     }
 
+    @Override
+    public String answerQuestion(String question, List<Blog> contextBlogs) {
+        if (!isConfigured()) {
+            logger.warn("Claude API key not configured, skipping RAG answer");
+            return null;
+        }
+        if (question == null || question.trim().isEmpty()) return null;
+        if (contextBlogs == null || contextBlogs.isEmpty()) return null;
+
+        StringBuilder context = new StringBuilder();
+        for (int i = 0; i < contextBlogs.size(); i++) {
+            Blog b = contextBlogs.get(i);
+            String title = b.getTitle() == null ? "(untitled)" : b.getTitle();
+            String content = b.getContent() == null ? "" : b.getContent();
+            context.append("--- Source [").append(i + 1).append("]: ")
+                   .append(title).append(" ---\n")
+                   .append(content).append("\n\n");
+        }
+
+        String prompt =
+                "You answer questions using ONLY the blog posts supplied below as context. "
+              + "Cite the sources you use with bracketed numbers like [1] or [2,3] that match "
+              + "the source numbers in the context. If the posts do not contain the answer, "
+              + "say so plainly and do not invent facts.\n\n"
+              + context.toString()
+              + "Question: " + question.trim() + "\n\nAnswer:";
+
+        try {
+            String response = callClaudeApi(prompt, ragMaxTokens);
+            if (response != null && !response.trim().isEmpty()) {
+                logger.info("RAG answer generated ({} chars, {} sources)",
+                        response.length(), contextBlogs.size());
+                return response.trim();
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to generate RAG answer: {}", e.getMessage());
+        }
+        return null;
+    }
+
     /**
      * Call the Claude Messages API and return the text content of the first response block.
+     * Uses the default {@code claude.max-tokens} budget.
      */
     String callClaudeApi(String userMessage) {
+        return callClaudeApi(userMessage, maxTokens);
+    }
+
+    /**
+     * Call the Claude Messages API with an explicit max-tokens budget — used by
+     * {@link #answerQuestion} so RAG answers have room to cite and explain.
+     */
+    String callClaudeApi(String userMessage, int maxTokensForCall) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("x-api-key", apiKey);
@@ -109,7 +163,7 @@ public class AiServiceImpl implements AiService {
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", model);
-        requestBody.put("max_tokens", maxTokens);
+        requestBody.put("max_tokens", maxTokensForCall);
         requestBody.put("messages", Collections.singletonList(message));
 
         try {

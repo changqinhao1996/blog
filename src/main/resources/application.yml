@@ -12,6 +12,8 @@ claude:
   api-key: ${CLAUDE_API_KEY:}
   model: ${CLAUDE_MODEL:claude-sonnet-4-6}
   max-tokens: 300
+  # Larger budget for RAG answers (Ask my blog) so Claude has room to cite + explain.
+  rag-max-tokens: 800
 
 voyage:
   api-key: ${VOYAGE_API_KEY:}

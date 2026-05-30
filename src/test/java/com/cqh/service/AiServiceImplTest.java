@@ -1,5 +1,6 @@
 package com.cqh.service;
 
+import com.cqh.po.Blog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,6 +31,7 @@ public class AiServiceImplTest {
         ReflectionTestUtils.setField(aiService, "apiKey", "test-api-key");
         ReflectionTestUtils.setField(aiService, "model", "claude-sonnet-4-6");
         ReflectionTestUtils.setField(aiService, "maxTokens", 300);
+        ReflectionTestUtils.setField(aiService, "ragMaxTokens", 800);
 
         RestTemplate restTemplate = new RestTemplate();
         ReflectionTestUtils.setField(aiService, "restTemplate", restTemplate);
@@ -196,5 +198,104 @@ public class AiServiceImplTest {
         String result = aiService.callClaudeApi("test message");
 
         assertNull(result);
+    }
+
+    // --- answerQuestion (RAG) tests ---
+
+    private static Blog blog(long id, String title, String content) {
+        Blog b = new Blog();
+        b.setId(id);
+        b.setTitle(title);
+        b.setContent(content);
+        return b;
+    }
+
+    @Test
+    public void answerQuestion_happyPath_buildsCitedAnswer() throws Exception {
+        String responseJson = "{\"content\":[{\"type\":\"text\",\"text\":"
+                + "\"Backprop is the algorithm [1].\"}]}";
+        mockServer.expect(requestTo("https://api.anthropic.com/v1/messages"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("x-api-key", "test-api-key"))
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        List<Blog> ctx = Arrays.asList(blog(1L, "Neural Nets", "Backprop and gradient descent."));
+        String result = aiService.answerQuestion("How does backprop work?", ctx);
+
+        assertEquals("Backprop is the algorithm [1].", result);
+        mockServer.verify();
+    }
+
+    @Test
+    public void answerQuestion_buildsPromptWithSourceMarkersAndQuestion() throws Exception {
+        String responseJson = "{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]}";
+        mockServer.expect(requestTo("https://api.anthropic.com/v1/messages"))
+                .andExpect(method(HttpMethod.POST))
+                // verify the JSON body contains both source markers and the question
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("--- Source [1]: Title A ---")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("--- Source [2]: Title B ---")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Question: what is X")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("max_tokens\":800")))
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        List<Blog> ctx = Arrays.asList(
+                blog(1L, "Title A", "content A"),
+                blog(2L, "Title B", "content B")
+        );
+        String result = aiService.answerQuestion("what is X", ctx);
+
+        assertEquals("ok", result);
+        mockServer.verify();
+    }
+
+    @Test
+    public void answerQuestion_nullQuestion_returnsNull() {
+        List<Blog> ctx = Arrays.asList(blog(1L, "T", "C"));
+        assertNull(aiService.answerQuestion(null, ctx));
+    }
+
+    @Test
+    public void answerQuestion_blankQuestion_returnsNull() {
+        List<Blog> ctx = Arrays.asList(blog(1L, "T", "C"));
+        assertNull(aiService.answerQuestion("   ", ctx));
+    }
+
+    @Test
+    public void answerQuestion_nullContext_returnsNull() {
+        assertNull(aiService.answerQuestion("q", null));
+    }
+
+    @Test
+    public void answerQuestion_emptyContext_returnsNull() {
+        assertNull(aiService.answerQuestion("q", Collections.<Blog>emptyList()));
+    }
+
+    @Test
+    public void answerQuestion_noApiKey_returnsNull() {
+        ReflectionTestUtils.setField(aiService, "apiKey", "");
+        List<Blog> ctx = Arrays.asList(blog(1L, "T", "C"));
+        assertNull(aiService.answerQuestion("q", ctx));
+    }
+
+    @Test
+    public void answerQuestion_apiError_returnsNull() {
+        mockServer.expect(requestTo("https://api.anthropic.com/v1/messages"))
+                .andRespond(withServerError());
+        List<Blog> ctx = Arrays.asList(blog(1L, "T", "C"));
+        assertNull(aiService.answerQuestion("q", ctx));
+    }
+
+    @Test
+    public void answerQuestion_handlesNullTitleAndContent() throws Exception {
+        // A blog with null title/content should not NPE — the prompt builder
+        // substitutes safe defaults.
+        String responseJson = "{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}]}";
+        mockServer.expect(requestTo("https://api.anthropic.com/v1/messages"))
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        Blog b = new Blog(); b.setId(99L); // title and content left null
+        String result = aiService.answerQuestion("q", Arrays.asList(b));
+
+        assertEquals("ok", result);
     }
 }
