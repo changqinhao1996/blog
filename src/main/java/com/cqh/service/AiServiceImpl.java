@@ -1,9 +1,12 @@
 package com.cqh.service;
 
+import com.cqh.config.AiGuardrailProperties;
+import com.cqh.util.PromptGuardrails;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,11 @@ public class AiServiceImpl implements AiService {
     @Value("${claude.max-tokens:300}")
     private int maxTokens;
 
+    // Optional: absent in plain unit tests that construct this class directly.
+    // When null or disabled, prompts fall back to their original un-guarded form.
+    @Autowired(required = false)
+    private AiGuardrailProperties guardrailProperties;
+
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -44,10 +52,10 @@ public class AiServiceImpl implements AiService {
 
         String prompt = "Summarize the following blog post in 2-3 concise sentences. "
                 + "Return only the summary text, no extra formatting or labels.\n\n"
-                + blogContent;
+                + content(blogContent);
 
         try {
-            String response = callClaudeApi(prompt);
+            String response = callClaudeApi(systemPrompt(PromptGuardrails.SUMMARY_SYSTEM_PROMPT), prompt);
             if (response != null && !response.trim().isEmpty()) {
                 logger.info("AI summary generated successfully");
                 return response.trim();
@@ -73,10 +81,10 @@ public class AiServiceImpl implements AiService {
                 + tagList + "]\n\n"
                 + "Return ONLY the selected tag names separated by commas, nothing else. "
                 + "Only pick tags from the provided list.\n\n"
-                + blogContent;
+                + content(blogContent);
 
         try {
-            String response = callClaudeApi(prompt);
+            String response = callClaudeApi(systemPrompt(PromptGuardrails.TAG_SYSTEM_PROMPT), prompt);
             if (response != null && !response.trim().isEmpty()) {
                 List<String> suggested = new ArrayList<>();
                 for (String name : response.split(",")) {
@@ -109,10 +117,10 @@ public class AiServiceImpl implements AiService {
                 + "It will be shown as preview text on list pages, so make it "
                 + "engaging and informative. Return ONLY the sentence — no "
                 + "quotes, no labels, no markdown.\n\n"
-                + blogContent;
+                + content(blogContent);
 
         try {
-            String response = callClaudeApi(prompt);
+            String response = callClaudeApi(systemPrompt(PromptGuardrails.DESCRIPTION_SYSTEM_PROMPT), prompt);
             if (response != null && !response.trim().isEmpty()) {
                 String cleaned = response.trim();
                 // Belt-and-braces: the DB column may be VARCHAR(200), so cap it.
@@ -129,9 +137,37 @@ public class AiServiceImpl implements AiService {
     }
 
     /**
+     * Whether the guardrail layer is active. False when the properties bean is
+     * absent (plain unit tests) or explicitly disabled — in which case prompts
+     * keep their original, un-guarded form.
+     */
+    private boolean guardrailsOn() {
+        return guardrailProperties != null && guardrailProperties.isEnabled();
+    }
+
+    /** Wrap untrusted content in delimiters when guardrails are on, else pass through. */
+    private String content(String blogContent) {
+        return guardrailsOn() ? PromptGuardrails.wrapUntrusted(blogContent) : blogContent;
+    }
+
+    /** Return the given system prompt when guardrails are on, else null (no system field). */
+    private String systemPrompt(String prompt) {
+        return guardrailsOn() ? prompt : null;
+    }
+
+    /**
      * Call the Claude Messages API and return the text content of the first response block.
      */
     String callClaudeApi(String userMessage) {
+        return callClaudeApi(null, userMessage);
+    }
+
+    /**
+     * Call the Claude Messages API with an optional system prompt. When
+     * {@code systemPrompt} is null/blank no {@code system} field is sent, so the
+     * request is identical to the legacy single-argument form.
+     */
+    String callClaudeApi(String systemPrompt, String userMessage) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("x-api-key", apiKey);
@@ -144,6 +180,9 @@ public class AiServiceImpl implements AiService {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", model);
         requestBody.put("max_tokens", maxTokens);
+        if (systemPrompt != null && !systemPrompt.trim().isEmpty()) {
+            requestBody.put("system", systemPrompt);
+        }
         requestBody.put("messages", Collections.singletonList(message));
 
         try {
