@@ -12,4 +12,11 @@ claude:
   api-key: ${CLAUDE_API_KEY:}
   model: ${CLAUDE_MODEL:claude-sonnet-4-6}
   max-tokens: 300
+  # AI guardrails (on by default). Set enabled: false for raw, un-guarded behaviour.
+  guardrail:
+    enabled: true
+    max-input-chars: 20000      # cap untrusted content sent to the model (0 = unlimited)
+    max-output-chars: 1000      # cap generated summary/description length (0 = unlimited)
+    rate-limit-per-minute: 30   # max AI calls per feature per minute (0 = unlimited)
+    moderation-enabled: true    # fail-closed content classifier for untrusted text
 

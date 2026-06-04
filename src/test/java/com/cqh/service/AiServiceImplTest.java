@@ -1,5 +1,6 @@
 package com.cqh.service;
 
+import com.cqh.config.AiGuardrailProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
@@ -247,5 +249,39 @@ public class AiServiceImplTest {
         String result = aiService.callClaudeApi("test message");
 
         assertNull(result);
+    }
+
+    // --- guardrail (Layer A) tests ---
+
+    @Test
+    public void generateSummary_withGuardrails_sendsSystemPromptAndDelimitsContent() throws Exception {
+        AiGuardrailProperties props = new AiGuardrailProperties();
+        props.setEnabled(true);
+        ReflectionTestUtils.setField(aiService, "guardrailProperties", props);
+
+        String responseJson = "{\"content\":[{\"type\":\"text\",\"text\":\"summary\"}]}";
+        mockServer.expect(requestTo("https://api.anthropic.com/v1/messages"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.system").exists())
+                .andExpect(jsonPath("$.messages[0].content").value(containsString("<untrusted_content>")))
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        String result = aiService.generateSummary("Some content");
+
+        assertEquals("summary", result);
+        mockServer.verify();
+    }
+
+    @Test
+    public void generateSummary_withoutGuardrails_sendsNoSystemPrompt() throws Exception {
+        // guardrailProperties left unset -> guardrails off -> legacy request shape
+        String responseJson = "{\"content\":[{\"type\":\"text\",\"text\":\"summary\"}]}";
+        mockServer.expect(requestTo("https://api.anthropic.com/v1/messages"))
+                .andExpect(jsonPath("$.system").doesNotExist())
+                .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
+
+        aiService.generateSummary("Some content");
+
+        mockServer.verify();
     }
 }
