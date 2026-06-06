@@ -8,11 +8,17 @@ spring:
 
 comment.avatar: /images/avatar.png
 
+openai:
+  # Primary AI provider on branch 0.0.5+ (tried before Claude).
+  api-key: ${OPENAI_API_KEY:}
+  model: ${OPENAI_MODEL:gpt-4o-mini}
+
 claude:
+  # Fallback AI provider. Used when OpenAI is not configured or its call fails.
   api-key: ${CLAUDE_API_KEY:}
   model: ${CLAUDE_MODEL:claude-sonnet-4-6}
   max-tokens: 300
-  # Larger budget for RAG answers (Ask my blog) so Claude has room to cite + explain.
+  # Larger budget for RAG answers (Ask my blog) so the model has room to cite + explain.
   rag-max-tokens: 800
 
 voyage:

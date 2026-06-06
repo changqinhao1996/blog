@@ -1,34 +1,43 @@
-# Setup Guide — Branch 0.0.4
+# Setup Guide — Branch 0.0.5
 
-Everything from 0.0.3 **plus the "Ask my blog" Retrieval-Augmented Generation (RAG) endpoint** at `GET / POST /ask`.
+Everything from 0.0.4 **plus OpenAI integration as the primary AI provider**. OpenAI is tried first for every AI call (summary, tags, description, suggest-tags endpoint, RAG `/ask` answer). Claude is the fallback. Both providers can be configured independently or together.
 
-## What you get on this branch
+## What's new on this branch
 
-Everything from 0.0.3, plus:
+| Change | Where |
+|---|---|
+| `LlmProvider` interface — single-method abstraction over a chat-completion call | `service/llm/LlmProvider.java` |
+| `OpenAiProvider` — `@Order(1)`, tries `https://api.openai.com/v1/chat/completions` | `service/llm/OpenAiProvider.java` |
+| `ClaudeProvider` — `@Order(2)`, extracted from the old `AiServiceImpl.callClaudeApi` | `service/llm/ClaudeProvider.java` |
+| `AiServiceImpl` — refactored to inject `List<LlmProvider>` and iterate by `@Order` | `service/AiServiceImpl.java` |
+| `openai` config block | `application.yml` |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` env vars | runtime |
 
-| Feature | Where | Powered by |
-|---|---|---|
-| **Ask my blog** | `GET /ask` (form) + `POST /ask` (answer) | Vector retrieval **chained into** Claude generation |
-| Nav menu "Ask AI" item | All public pages | Links to `/ask` |
-
-How the chain works:
+How the fallback chain works for every AI call:
 
 ```
-your question
-  → Voyage embeds it (dim 512)
-  → MySQL 9 ranks the top-5 blog posts by cosine similarity (VECTOR_TO_STRING)
-  → those posts become numbered context in a Claude prompt
-  → Claude answers, citing sources as [1], [2], ...
-  → Claude refuses to answer if the posts don't cover the question (no hallucination)
+prompt assembled by AiServiceImpl
+       ↓
+OpenAiProvider.complete()
+   ├─ configured?       → no  → skip, try next
+   ├─ HTTP 200 + content → yes → return text
+   ├─ HTTP error / null  → fall through to next provider
+ClaudeProvider.complete()
+   ├─ configured?       → no  → skip
+   ├─ HTTP 200 + content → yes → return text
+   ├─ HTTP error / null  → return null (graceful)
+       ↓
+AiServiceImpl returns the first non-empty response,
+or null if no provider succeeds.
 ```
 
-Both halves degrade gracefully — missing `VOYAGE_API_KEY` or `CLAUDE_API_KEY` yields a friendly error, never a crash.
+The chain is fully extensible — to add a new provider (Gemini, Mistral, etc.) drop a new `@Service @Order(N) class XyzProvider implements LlmProvider`. No change to `AiServiceImpl`.
 
 ---
 
 ## 1. Prerequisites
 
-Same as 0.0.3:
+Same as 0.0.4:
 
 | Software | Version |
 |---|---|
@@ -37,14 +46,17 @@ Same as 0.0.3:
 | **MySQL 9.0+** | Required for `VECTOR(512)` |
 | Git | 2.x |
 
-**Both API keys are required for /ask to actually answer:**
+**API keys (at least ONE required for AI features to actually return responses):**
 
 | Key | Where to get | Used for | Required? |
 |---|---|---|---|
-| **`VOYAGE_API_KEY`** | [voyageai.com](https://www.voyageai.com) → Sign up → API keys | Embedding the question (and blog content) into 512-dim vectors | **Yes** — without it the retrieval step returns nothing |
-| **`CLAUDE_API_KEY`** | [console.anthropic.com](https://console.anthropic.com) → API Keys | Generating the grounded answer with citations | **Yes** — without it `/ask` returns a friendly "Could not generate an answer" message |
+| **`OPENAI_API_KEY`** | [platform.openai.com](https://platform.openai.com/api-keys) | Primary provider for ALL AI calls (summary, tags, description, RAG answer) | At least one of the two |
+| **`CLAUDE_API_KEY`** | [console.anthropic.com](https://console.anthropic.com) → API Keys | Fallback provider — used when OpenAI is absent or its call fails | At least one of the two |
+| **`VOYAGE_API_KEY`** | [voyageai.com](https://www.voyageai.com) → Sign up → API keys | Embedding for vector retrieval (unrelated to OpenAI/Claude) | **Yes** for any vector feature including `/ask` |
 
-> Without either key the page still renders, the form still submits, no exception is thrown — but you won't get a real answer. This is intentional graceful degradation.
+> **Without OPENAI_API_KEY**: the system silently skips OpenAI and falls through to Claude. Behaviour is identical to 0.0.4.
+> **Without CLAUDE_API_KEY but with OPENAI_API_KEY**: everything still works; OpenAI handles every AI call.
+> **Without either**: AI features degrade gracefully — summary/tags/description stay empty, `/ask` returns "Could not generate an answer".
 
 ---
 
@@ -53,7 +65,7 @@ Same as 0.0.3:
 ```bash
 git clone https://github.com/changqinhao1996/blog.git ~/Desktop/blog
 cd ~/Desktop/blog
-git checkout 0.0.4
+git checkout 0.0.5
 ```
 
 ---
@@ -62,8 +74,6 @@ git checkout 0.0.4
 
 ```bash
 brew install mysql
-/opt/homebrew/opt/mysql/bin/mysql --version    # confirm 9.x.x
-
 mkdir -p ~/.mysql9/data
 cat > ~/.mysql9/my.cnf <<'EOF'
 [mysqld]
@@ -76,7 +86,6 @@ basedir  = /opt/homebrew/opt/mysql
 port     = 3307
 socket   = /tmp/mysql9.sock
 EOF
-
 /opt/homebrew/opt/mysql/bin/mysqld --defaults-file=$HOME/.mysql9/my.cnf --initialize-insecure
 /opt/homebrew/opt/mysql/bin/mysqld --defaults-file=$HOME/.mysql9/my.cnf &
 ```
@@ -97,30 +106,43 @@ SQL
 
 ---
 
-## 5. Export BOTH API keys
+## 5. Export API keys
 
 ```bash
-export VOYAGE_API_KEY=pa-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-export CLAUDE_API_KEY=sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Primary AI provider (recommended on 0.0.5)
+export OPENAI_API_KEY=sk-...
+
+# Optional: fallback AI provider
+export CLAUDE_API_KEY=sk-ant-api03-...
+
+# Required for /ask and semantic search
+export VOYAGE_API_KEY=pa-...
 ```
 
-Recommended pattern — store both in a gitignored file:
+Recommended pattern — gitignored file you can source:
 
 ```bash
 cat > ~/Desktop/blog/.env <<'EOF'
+export OPENAI_API_KEY=sk-...
+export CLAUDE_API_KEY=sk-ant-api03-...
 export VOYAGE_API_KEY=pa-...
-export CLAUDE_API_KEY=sk-ant-...
 EOF
 chmod 600 ~/Desktop/blog/.env
-echo ".env" >> .gitignore     # only if not already ignored
+echo ".env" >> .gitignore     # only if not already
 source .env
+```
+
+### Optional model override
+
+By default OpenAI uses `gpt-4o-mini` (fast + cheap). Override with:
+
+```bash
+export OPENAI_MODEL=gpt-4o            # or any other Chat Completions model id
 ```
 
 ---
 
 ## 6. Start the app on the vector profile
-
-> **Critical:** Spring Boot 1.5 uses `-Drun.profiles=vector`. The `-Dspring-boot.run.profiles=...` form is silently ignored and defaults to `dev` against MySQL 8.4.
 
 ```bash
 cd ~/Desktop/blog
@@ -140,8 +162,6 @@ Tomcat started on port(s): 8081 (http)
 
 ## 7. One-time schema migration
 
-JPA creates the tables on first launch; Hibernate cannot generate `VECTOR(512)`. Apply it manually:
-
 ```bash
 /opt/homebrew/opt/mysql/bin/mysql -P 3307 -h 127.0.0.1 -u root -p blog_v9 \
     < docs/sql/V1__add_embedding_column.sql
@@ -151,79 +171,59 @@ JPA creates the tables on first launch; Hibernate cannot generate `VECTOR(512)`.
 
 ## 8. Add content and backfill embeddings
 
-`/ask` needs posts with vectors. Either publish a few via the admin UI (auto-embeds), or seed via SQL then run the backfill:
-
 ```bash
-# log in
 curl -s -c cookies.txt -X POST http://localhost:8081/admin/login \
      --data-urlencode 'username=admin' --data-urlencode 'password=password' -o /dev/null
-
-# backfill (~1 min due to Voyage free-tier rate limit + retry/backoff)
-curl --max-time 300 -b cookies.txt \
-     http://localhost:8081/admin/blogs/backfill-embeddings
+curl --max-time 300 -b cookies.txt http://localhost:8081/admin/blogs/backfill-embeddings
 ```
 
 ---
 
 ## 9. Try the RAG endpoint
 
-Open **http://localhost:8081/ask** and try three deliberately different questions:
+Open **http://localhost:8081/ask** and ask:
 
-### 9.1  Multi-source synthesis
 ```
 How does the attention mechanism in transformers differ from a regular neural network?
 ```
-Expect: answer cites `[1]` and `[2]`; sources include both the Transformers post and the Neural Network post.
 
-### 9.2  Single-source
-```
-What temperature water should I use for pour-over coffee?
-```
-Expect: answer cites `[1]`; the Coffee post is the top source. If the post doesn't give an exact figure, Claude will say so rather than invent one.
+Server log will show **which provider answered** — that's how you confirm OpenAI is being tried first:
 
-### 9.3  The honesty test (proves it's RAG, not "ask Claude anything")
-```
-What is the capital of Mongolia?
-```
-Expect: Claude says the blog doesn't cover Mongolia and refuses to answer — even though it *knows* the answer from training. That refusal is the defining safety property of RAG.
-
----
-
-## 10. Same demo from the terminal
-
-```bash
-curl -s -X POST http://localhost:8081/ask \
-  --data-urlencode 'question=How does attention work in transformers?' \
-  | sed -n '/Answer/,/Sources/p' | sed 's/<[^>]*>//g' | tr -s '[:space:]'
-```
-
-Server log shows the full chain:
 ```
 EmbeddingServiceImpl : Embedding generated (dim=512)
-AiServiceImpl        : RAG answer generated (N chars, 5 sources)
-RagServiceImpl       : RAG ask: question='...' k=5 sourcesFound=5 answerChars=N
+AiServiceImpl        : AI response from OpenAI (1024 chars)    ← OpenAI succeeded
+AiServiceImpl        : RAG answer generated (1024 chars, 5 sources)
+```
+
+If OpenAI is not configured or fails, you'll see the fallback in action:
+
+```
+AiServiceImpl        : AI response from Claude (1024 chars)    ← Claude fallback
 ```
 
 ---
 
-## 11. Stop & switch back
+## 10. How to verify the fallback chain
 
-```bash
-pkill -f "run.profiles=vector"               # stop the vector instance
-mvn spring-boot:run                          # default 'dev' profile → MySQL 8.4
-mysqladmin -P 3307 -h 127.0.0.1 -u root -p shutdown    # optional, stop MySQL 9
-```
+Quick experiments you can run after publishing a couple of blogs:
+
+| Setup | Expected behaviour |
+|---|---|
+| Both keys set | OpenAI answers; log shows `AI response from OpenAI` |
+| `unset OPENAI_API_KEY`, restart | Claude answers; log shows `AI response from Claude` |
+| `unset CLAUDE_API_KEY`, restart with OpenAI | OpenAI answers; Claude is silently skipped |
+| Both keys unset | `/ask` shows "Could not generate an answer. Check that CLAUDE_API_KEY is set." (the existing error message is kept for backward compat) |
+| Override `OPENAI_MODEL=invalid` | OpenAI returns 4xx, AiService falls back to Claude automatically |
 
 ---
 
 ## API keys summary
 
-| Key | Required for | Without it, /ask says |
+| Key | Required? | Used for |
 |---|---|---|
-| **`VOYAGE_API_KEY`** | Embedding your question for retrieval | "No relevant blog posts found for your question" |
-| **`CLAUDE_API_KEY`** | Generating the grounded answer | "Could not generate an answer. Check that CLAUDE_API_KEY is set." |
-
-Both keys are required for a working `/ask`. The 0.0.3 features (semantic search, related articles) still work with just `VOYAGE_API_KEY`.
+| **`OPENAI_API_KEY`** | At least one of the two | Primary AI provider for all generation tasks |
+| **`CLAUDE_API_KEY`** | At least one of the two | Fallback AI provider |
+| **`VOYAGE_API_KEY`** | Yes for vector / RAG features | Embedding the question (and blog content) |
 
 ---
 
@@ -233,7 +233,11 @@ Both keys are required for a working `/ask`. The 0.0.3 features (semantic search
 mvn -o test -Dtest='*Test'
 ```
 
-Expected: **324 tests passing**. All HTTP calls are mocked; no API keys needed for tests.
+Expected: **355 tests passing** (+31 over 0.0.4 — 13 `OpenAiProviderTest` + 11 `ClaudeProviderTest` + the refactored `AiServiceImplTest`).
+
+The tests cover:
+- OpenAI and Claude HTTP integration in isolation (vendor-specific tests under `service/llm`)
+- AiService orchestration: tries OpenAI first, falls back to Claude on null/throw/blank, stops after first success, handles unconfigured providers, prompt assembly, RAG `max_tokens=800` vs summary `max_tokens=300`
 
 ---
 
@@ -244,4 +248,5 @@ Expected: **324 tests passing**. All HTTP calls are mocked; no API keys needed f
 | 0.0.1 | Base blog (no AI) |
 | 0.0.2 | Claude auto-summary / tagging / description |
 | 0.0.3 | MySQL 9 vector search + related articles |
-| **0.0.4 (this branch)** | "Ask my blog" RAG endpoint — chains retrieval into Claude generation |
+| 0.0.4 | "Ask my blog" RAG endpoint |
+| **0.0.5 (this branch)** | OpenAI integration — primary AI provider, with Claude as fallback |

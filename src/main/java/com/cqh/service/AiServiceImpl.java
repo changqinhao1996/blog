@@ -1,31 +1,37 @@
 package com.cqh.service;
 
 import com.cqh.po.Blog;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cqh.service.llm.LlmProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
+/**
+ * AI service for blog summaries, tag suggestions, descriptions, and RAG
+ * answers. Does NOT speak any vendor protocol directly — instead it builds
+ * the prompt for each task and hands it off to the configured chain of
+ * {@link LlmProvider} beans.
+ *
+ * <p>Branch 0.0.5: providers are tried in {@code @Order} sequence —
+ * {@code OpenAiProvider} (Order 1) first, then {@code ClaudeProvider}
+ * (Order 2) as fallback. The first provider to return a non-empty response
+ * wins. Unconfigured providers (missing API key) are skipped silently.
+ *
+ * <p>Graceful degradation: if no provider succeeds, the public methods
+ * return {@code null} (or an empty list for {@code suggestTagNames}), and
+ * callers (BlogServiceImpl, BlogController, RagService) treat that as
+ * "AI not available" without throwing.
+ */
 @Service
 public class AiServiceImpl implements AiService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
-    private static final String API_URL = "https://api.anthropic.com/v1/messages";
-    private static final String API_VERSION = "2023-06-01";
-
-    @Value("${claude.api-key:}")
-    private String apiKey;
-
-    @Value("${claude.model:claude-sonnet-4-6}")
-    private String model;
 
     @Value("${claude.max-tokens:300}")
     private int maxTokens;
@@ -34,13 +40,18 @@ public class AiServiceImpl implements AiService {
     @Value("${claude.rag-max-tokens:800}")
     private int ragMaxTokens;
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    /**
+     * All LlmProvider beans, in {@code @Order} sequence. On 0.0.5 this is
+     * [OpenAiProvider, ClaudeProvider]; future providers can be added by
+     * dropping a new {@code @Service @Order(N)} bean — no change here.
+     */
+    @Autowired
+    private List<LlmProvider> providers;
 
     @Override
     public String generateSummary(String blogContent) {
         if (!isConfigured()) {
-            logger.warn("Claude API key not configured, skipping summary generation");
+            logger.warn("No AI provider configured, skipping summary generation");
             return null;
         }
         if (blogContent == null || blogContent.trim().isEmpty()) {
@@ -52,7 +63,7 @@ public class AiServiceImpl implements AiService {
                 + blogContent;
 
         try {
-            String response = callClaudeApi(prompt);
+            String response = callLlm(prompt, maxTokens);
             if (response != null && !response.trim().isEmpty()) {
                 logger.info("AI summary generated successfully");
                 return response.trim();
@@ -66,10 +77,11 @@ public class AiServiceImpl implements AiService {
     @Override
     public List<String> suggestTagNames(String blogContent, List<String> existingTagNames) {
         if (!isConfigured()) {
-            logger.warn("Claude API key not configured, skipping tag suggestion");
+            logger.warn("No AI provider configured, skipping tag suggestion");
             return Collections.emptyList();
         }
-        if (blogContent == null || blogContent.trim().isEmpty() || existingTagNames == null || existingTagNames.isEmpty()) {
+        if (blogContent == null || blogContent.trim().isEmpty()
+                || existingTagNames == null || existingTagNames.isEmpty()) {
             return Collections.emptyList();
         }
 
@@ -81,7 +93,7 @@ public class AiServiceImpl implements AiService {
                 + blogContent;
 
         try {
-            String response = callClaudeApi(prompt);
+            String response = callLlm(prompt, maxTokens);
             if (response != null && !response.trim().isEmpty()) {
                 List<String> suggested = new ArrayList<>();
                 for (String name : response.split(",")) {
@@ -102,7 +114,7 @@ public class AiServiceImpl implements AiService {
     @Override
     public String answerQuestion(String question, List<Blog> contextBlogs) {
         if (!isConfigured()) {
-            logger.warn("Claude API key not configured, skipping RAG answer");
+            logger.warn("No AI provider configured, skipping RAG answer");
             return null;
         }
         if (question == null || question.trim().isEmpty()) return null;
@@ -127,7 +139,7 @@ public class AiServiceImpl implements AiService {
               + "Question: " + question.trim() + "\n\nAnswer:";
 
         try {
-            String response = callClaudeApi(prompt, ragMaxTokens);
+            String response = callLlm(prompt, ragMaxTokens);
             if (response != null && !response.trim().isEmpty()) {
                 logger.info("RAG answer generated ({} chars, {} sources)",
                         response.length(), contextBlogs.size());
@@ -140,58 +152,41 @@ public class AiServiceImpl implements AiService {
     }
 
     /**
-     * Call the Claude Messages API and return the text content of the first response block.
-     * Uses the default {@code claude.max-tokens} budget.
+     * Iterate the configured providers in {@code @Order} sequence, returning
+     * the first non-empty response. Returns null if every provider is either
+     * unconfigured, errors, or returns an empty string.
      */
-    String callClaudeApi(String userMessage) {
-        return callClaudeApi(userMessage, maxTokens);
-    }
-
-    /**
-     * Call the Claude Messages API with an explicit max-tokens budget — used by
-     * {@link #answerQuestion} so RAG answers have room to cite and explain.
-     */
-    String callClaudeApi(String userMessage, int maxTokensForCall) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-api-key", apiKey);
-        headers.set("anthropic-version", API_VERSION);
-
-        Map<String, Object> message = new HashMap<>();
-        message.put("role", "user");
-        message.put("content", userMessage);
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", model);
-        requestBody.put("max_tokens", maxTokensForCall);
-        requestBody.put("messages", Collections.singletonList(message));
-
-        try {
-            String jsonBody = objectMapper.writeValueAsString(requestBody);
-            logger.debug("Claude API request - model: {}, content length: {}", model, userMessage.length());
-            HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(
-                    API_URL, HttpMethod.POST, entity, String.class);
-
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode content = root.path("content");
-                if (content.isArray() && content.size() > 0) {
-                    return content.get(0).path("text").asText();
-                }
+    String callLlm(String prompt, int maxTokensForCall) {
+        if (providers == null) return null;
+        for (LlmProvider provider : providers) {
+            if (!provider.isConfigured()) {
+                logger.debug("Provider {} not configured, skipping", provider.name());
+                continue;
             }
-        } catch (HttpClientErrorException e) {
-            logger.warn("Claude API error ({}): {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RuntimeException("Claude API call failed", e);
-        } catch (Exception e) {
-            logger.warn("Claude API call failed: {}", e.getMessage());
-            throw new RuntimeException("Claude API call failed", e);
+            try {
+                String response = provider.complete(prompt, maxTokensForCall);
+                if (response != null && !response.trim().isEmpty()) {
+                    logger.info("AI response from {} ({} chars)", provider.name(), response.length());
+                    return response;
+                }
+                logger.warn("{} returned empty response; trying next provider", provider.name());
+            } catch (Exception e) {
+                logger.warn("{} call failed: {}; trying next provider", provider.name(), e.getMessage());
+            }
         }
+        logger.warn("All AI providers failed or are not configured");
         return null;
     }
 
+    /**
+     * @return true if at least one provider has been configured (has an API
+     * key set). Used as a fast-path guard before building prompts.
+     */
     boolean isConfigured() {
-        return apiKey != null && !apiKey.trim().isEmpty();
+        if (providers == null) return false;
+        for (LlmProvider p : providers) {
+            if (p.isConfigured()) return true;
+        }
+        return false;
     }
 }
